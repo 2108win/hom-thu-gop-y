@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hòm thư góp ý - LỮ ĐOÀN PPK234
 
 ## Getting Started
 
-First, run the development server:
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Google Sheets
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The app stores feedback tickets and survey responses in Google Sheets through
+server-side API routes. Do not call Google Sheets directly from the browser.
 
-## Learn More
+Required environment variables:
 
-To learn more about Next.js, take a look at the following resources:
+```env
+GOOGLE_SHEETS_SPREADSHEET_ID=
+GOOGLE_SERVICE_ACCOUNT_EMAIL=
+GOOGLE_PRIVATE_KEY=
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+ADMIN_BOOTSTRAP_USER=
+ADMIN_BOOTSTRAP_PASSWORD=
+ADMIN_BOOTSTRAP_DISPLAY_NAME=
+ADMIN_SESSION_SECRET=
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+GOOGLE_SHEETS_FEEDBACK_SHEET=GopY
+GOOGLE_SHEETS_SURVEY_SHEET=KhaoSat
+GOOGLE_SHEETS_SURVEY_LIST_SHEET=DanhSachKhaoSat
+GOOGLE_SHEETS_LISTENER_SHEET=BoPhanTiepNhan
+GOOGLE_SHEETS_ADMIN_SHEET=TaiKhoanAdmin
+```
 
-## Deploy on Vercel
+You can also use `GOOGLE_SERVICE_ACCOUNT_JSON` instead of
+`GOOGLE_SERVICE_ACCOUNT_EMAIL` and `GOOGLE_PRIVATE_KEY`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Setup:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Create a Google Cloud service account and key.
+2. Enable Google Sheets API for the Google Cloud project.
+3. Create a Google Sheet.
+4. Share the Sheet with the service account email as Editor.
+5. Put the environment variables in `.env.local`.
+6. Restart `npm run dev`.
+
+The app will create or initialize these tabs automatically:
+
+- `GopY`: feedback tickets
+- `KhaoSat`: legacy/internal survey responses
+- `DanhSachKhaoSat`: admin-managed survey links, dates, and QR routes
+- `BoPhanTiepNhan`: admin-managed receiving departments/listeners
+- `TaiKhoanAdmin`: admin login accounts
+
+Admin account rows use these columns, one account per row:
+
+```text
+username | password | display_name | is_enabled | updated_at
+```
+
+Set `is_enabled` to `TRUE` for accounts allowed to log in. Passwords are read
+directly from the sheet, so limit access to the Google Sheet to trusted editors.
+When the `/quan-tri` page is opened, the app ensures this tab exists. If the tab
+is empty and `ADMIN_BOOTSTRAP_USER`/`ADMIN_BOOTSTRAP_PASSWORD` are set, one
+initial enabled account is added automatically. Existing legacy
+`ADMIN_USER`/`ADMIN_PASSWORD` variables are also accepted for this one-time
+bootstrap seed.
