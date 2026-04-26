@@ -4,6 +4,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 const cookieName = "hom_thu_admin";
 const sessionVersion = 3;
+const sessionMaxAgeSeconds = 60 * 60 * 24 * 7;
 
 export type AdminSession = {
   user: string;
@@ -24,7 +25,7 @@ function sign(payload: string) {
 }
 
 export function createAdminSessionValue(user: string, displayName: string) {
-  const expires = Date.now() + 1000 * 60 * 60 * 8;
+  const expires = Date.now() + sessionMaxAgeSeconds * 1000;
   const payload = JSON.stringify({
     user,
     displayName: displayName.trim() || user,
@@ -92,3 +93,4 @@ export function isValidAdminSession(value?: string) {
 }
 
 export { cookieName as adminCookieName };
+export { sessionMaxAgeSeconds as adminSessionMaxAgeSeconds };

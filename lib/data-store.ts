@@ -9,6 +9,8 @@ export const isStoreConfigError = (error: unknown) =>
   supabaseStore.isSupabaseConfigError(error);
 
 export const authenticateAdminAccount = supabaseStore.authenticateAdminAccount;
+export const getAdminAccount = supabaseStore.getAdminAccount;
+export const patchAdminAccount = supabaseStore.patchAdminAccount;
 
 export const getTickets = supabaseStore.getTickets;
 export const appendTicket = supabaseStore.appendTicket;

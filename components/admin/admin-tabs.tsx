@@ -11,11 +11,12 @@ const tabs: Array<[AdminTab, string]> = [
   ["tickets", "Góp ý"],
   ["surveys", "Khảo sát"],
   ["listeners", "Tiếp nhận"],
+  ["account", "Tài khoản"],
 ];
 
 export function AdminTabs({ activeTab, onChange }: AdminTabsProps) {
   return (
-    <div className="tabs tabs-box mb-4 grid w-full grid-cols-3 shadow-sm">
+    <div className="tabs tabs-box mb-4 grid w-full grid-cols-4 shadow-sm">
       {tabs.map(([value, label]) => (
         <button
           key={value}

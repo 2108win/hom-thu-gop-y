@@ -23,7 +23,7 @@ export function DeleteDialog({
   return (
     <div className="modal modal-open" role="alertdialog" aria-modal="true">
       <div className="modal-box">
-        <div className="mb-3 flex size-12 items-center justify-center bg-red-50 text-red-700">
+        <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-red-50 text-red-700">
           <Trash2 className="size-7" />
         </div>
         <h3 className="text-lg font-semibold uppercase">Xác nhận xóa</h3>

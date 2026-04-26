@@ -1,7 +1,6 @@
 import "server-only";
 
 import {
-  formatDateTime,
   isSurveyOpen,
   normalizeTicketCode,
   type ManagedAdminAccount,
@@ -51,9 +50,9 @@ export class SupabaseConfigError extends Error {
 export function isSupabaseConfigured() {
   return Boolean(
     process.env.SUPABASE_URL?.trim() &&
-      (process.env.SUPABASE_SECRET_KEY?.trim() ||
-        process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
-        process.env.SUPABASE_SERVICE_ROLE?.trim()),
+    (process.env.SUPABASE_SECRET_KEY?.trim() ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
+      process.env.SUPABASE_SERVICE_ROLE?.trim()),
   );
 }
 
@@ -69,9 +68,7 @@ function getSupabaseConfig() {
     process.env.SUPABASE_SERVICE_ROLE?.trim();
 
   if (!url || !serverKey) {
-    throw new SupabaseConfigError(
-      "Thiếu SUPABASE_URL và SUPABASE_SECRET_KEY.",
-    );
+    throw new SupabaseConfigError("Thiếu SUPABASE_URL và SUPABASE_SECRET_KEY.");
   }
 
   if (serverKey.startsWith("sb_publishable_")) {
@@ -145,6 +142,10 @@ function eqFilter(column: string, value: string) {
   return `${column}=eq.${encodeURIComponent(value)}`;
 }
 
+function databaseTimestamp() {
+  return new Date().toISOString();
+}
+
 function normalizeAnswers(value: SurveyResponseRow["answers"]) {
   if (Array.isArray(value)) {
     return value;
@@ -175,6 +176,41 @@ async function getAdminAccounts() {
   return supabaseFetch<AdminAccountRow[]>(
     "admin_accounts?select=*&order=created_order.asc",
   );
+}
+
+export async function getAdminAccount(username: string) {
+  const normalizedUsername = username.trim().toLowerCase();
+  if (!normalizedUsername) {
+    return null;
+  }
+
+  const accounts = await getAdminAccounts();
+  return (
+    accounts.find(
+      (account) => account.username.toLowerCase() === normalizedUsername,
+    ) ?? null
+  );
+}
+
+export async function patchAdminAccount(
+  username: string,
+  patch: Partial<Pick<ManagedAdminAccount, "display_name" | "password">>,
+) {
+  const exactUsername = username.trim();
+  if (!exactUsername) {
+    return null;
+  }
+
+  const rows = await supabaseFetch<AdminAccountRow[]>(
+    `admin_accounts?${eqFilter("username", exactUsername)}`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ ...patch, updated_at: databaseTimestamp() }),
+    },
+  );
+
+  return rows[0] ?? null;
 }
 
 export async function authenticateAdminAccount(
@@ -287,11 +323,14 @@ export async function removeTicket(ticketCode: string) {
     return false;
   }
 
-  await supabaseFetch(`feedback_tickets?${eqFilter("ticket_code", normalized)}`, {
-    method: "DELETE",
-    headers: { Prefer: "return=minimal" },
-    allowEmpty: true,
-  });
+  await supabaseFetch(
+    `feedback_tickets?${eqFilter("ticket_code", normalized)}`,
+    {
+      method: "DELETE",
+      headers: { Prefer: "return=minimal" },
+      allowEmpty: true,
+    },
+  );
   return true;
 }
 
@@ -331,7 +370,7 @@ export async function patchManagedSurvey(
     {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
-      body: JSON.stringify({ ...patch, updated_at: formatDateTime() }),
+      body: JSON.stringify({ ...patch, updated_at: databaseTimestamp() }),
     },
   );
   return rows[0] ?? null;
@@ -394,11 +433,14 @@ export async function removeSurveyResponse(responseCode: string) {
     return false;
   }
 
-  await supabaseFetch(`survey_responses?${eqFilter("response_code", normalized)}`, {
-    method: "DELETE",
-    headers: { Prefer: "return=minimal" },
-    allowEmpty: true,
-  });
+  await supabaseFetch(
+    `survey_responses?${eqFilter("response_code", normalized)}`,
+    {
+      method: "DELETE",
+      headers: { Prefer: "return=minimal" },
+      allowEmpty: true,
+    },
+  );
   return true;
 }
 
@@ -427,7 +469,7 @@ export async function patchManagedListener(
     {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
-      body: JSON.stringify({ ...patch, updated_at: formatDateTime() }),
+      body: JSON.stringify({ ...patch, updated_at: databaseTimestamp() }),
     },
   );
   return rows[0] ?? null;

@@ -5,8 +5,13 @@ import type {
   TicketStatus,
 } from "@/lib/data-models";
 
-export type AdminTab = "tickets" | "surveys" | "listeners";
+export type AdminTab = "tickets" | "surveys" | "listeners" | "account";
 export type StatusFilter = "all" | TicketStatus;
+
+export type AdminProfile = {
+  username: string;
+  displayName: string;
+};
 
 export type SurveyDraft = {
   title: string;

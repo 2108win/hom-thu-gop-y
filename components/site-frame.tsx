@@ -50,7 +50,7 @@ export function UnitHeader({
       </div>
       <p className="lux-badge mb-2 inline-flex items-center justify-center gap-1 px-3 py-1 text-[10px] font-bold tracking-[0.18em] text-(--military-cream) uppercase">
         <ShieldCheck className="size-3" />
-        Tiếp nhận bảo mật
+        Tiếp nhận góp ý bảo mật
       </p>
       <h1 className="text-2xl leading-7 font-semibold tracking-tight text-white uppercase">
         {unitName}

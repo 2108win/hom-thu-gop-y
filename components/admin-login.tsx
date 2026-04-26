@@ -1,21 +1,25 @@
 "use client";
 
-import { FormEvent, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
+import { AccountTab } from "@/components/admin/account-tab";
 import { AdminTabs } from "@/components/admin/admin-tabs";
 import { DashboardHeader } from "@/components/admin/dashboard-header";
 import { DeleteDialog } from "@/components/admin/delete-dialog";
-import {
-  exportListeners,
-  exportSurveys,
-  exportTickets,
-} from "@/components/admin/exporters";
 import { ListenersTab } from "@/components/admin/listeners-tab";
 import { LoginForm } from "@/components/admin/login-form";
 import { SurveysTab } from "@/components/admin/surveys-tab";
 import { TicketsTab } from "@/components/admin/tickets-tab";
 import type {
   AdminTab,
+  AdminProfile,
   DeleteConfirm,
   ListenerDraft,
   StatusFilter,
@@ -33,6 +37,8 @@ import {
   type StoredTicket,
 } from "@/lib/data-models";
 import { copyQrImageToClipboard } from "@/lib/qr-clipboard";
+import { LoaderCircle } from "lucide-react";
+import { toast } from "sonner";
 
 function subscribeToOrigin() {
   return () => undefined;
@@ -46,8 +52,18 @@ function getServerOrigin() {
   return "";
 }
 
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function sortListeners(listeners: ManagedListener[]) {
+  return [...listeners].sort((a, b) => a.order - b.order);
+}
+
 export function AdminLogin() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
   const [activeTab, setActiveTab] = useState<AdminTab>("tickets");
   const [tickets, setTickets] = useState<StoredTicket[]>([]);
   const [managedSurveys, setManagedSurveys] = useState<ManagedSurvey[]>([]);
@@ -77,14 +93,22 @@ export function AdminLogin() {
     getServerOrigin,
   );
 
-  const readErrorMessage = async (response: Response) => {
+  const readErrorMessage = useCallback(async (response: Response) => {
     try {
       const data = (await response.json()) as { message?: string };
       return data.message || "Có lỗi xảy ra.";
     } catch {
       return "Có lỗi xảy ra.";
     }
-  };
+  }, []);
+
+  const clearAdminState = useCallback(() => {
+    setIsLoggedIn(false);
+    setAdminProfile(null);
+    setTickets([]);
+    setManagedSurveys([]);
+    setManagedListeners([]);
+  }, []);
 
   const isActionPending = (key: string) => pendingActions.includes(key);
 
@@ -106,57 +130,101 @@ export function AdminLogin() {
     }
   };
 
-  const loadData = async () => {
-    setLoading(true);
-    setAdminError("");
+  const loadData = useCallback(
+    async (successToast?: string) => {
+      setLoading(true);
+      setAdminError("");
 
-    try {
-      const [ticketsResponse, surveysResponse, listenersResponse] =
-        await Promise.all([
-          fetch("/api/admin/tickets", { cache: "no-store" }),
-          fetch("/api/admin/surveys", { cache: "no-store" }),
-          fetch("/api/admin/listeners", { cache: "no-store" }),
-        ]);
+      try {
+        const [ticketsResponse, surveysResponse, listenersResponse] =
+          await Promise.all([
+            fetch("/api/admin/tickets", { cache: "no-store" }),
+            fetch("/api/admin/surveys", { cache: "no-store" }),
+            fetch("/api/admin/listeners", { cache: "no-store" }),
+          ]);
 
-      if (
-        ticketsResponse.status === 401 ||
-        surveysResponse.status === 401 ||
-        listenersResponse.status === 401
-      ) {
-        setIsLoggedIn(false);
-        throw new Error("Phiên quản trị đã hết hạn.");
-      }
-      if (!ticketsResponse.ok) {
-        throw new Error(await readErrorMessage(ticketsResponse));
-      }
-      if (!surveysResponse.ok) {
-        throw new Error(await readErrorMessage(surveysResponse));
-      }
-      if (!listenersResponse.ok) {
-        throw new Error(await readErrorMessage(listenersResponse));
-      }
+        if (
+          ticketsResponse.status === 401 ||
+          surveysResponse.status === 401 ||
+          listenersResponse.status === 401
+        ) {
+          clearAdminState();
+          throw new Error("Phiên quản trị đã hết hạn.");
+        }
+        if (!ticketsResponse.ok) {
+          throw new Error(await readErrorMessage(ticketsResponse));
+        }
+        if (!surveysResponse.ok) {
+          throw new Error(await readErrorMessage(surveysResponse));
+        }
+        if (!listenersResponse.ok) {
+          throw new Error(await readErrorMessage(listenersResponse));
+        }
 
-      const ticketsData = (await ticketsResponse.json()) as {
-        tickets: StoredTicket[];
-      };
-      const surveysData = (await surveysResponse.json()) as {
-        surveys: ManagedSurvey[];
-      };
-      const listenersData = (await listenersResponse.json()) as {
-        listeners: ManagedListener[];
-      };
+        const ticketsData = (await ticketsResponse.json()) as {
+          tickets: StoredTicket[];
+        };
+        const surveysData = (await surveysResponse.json()) as {
+          surveys: ManagedSurvey[];
+        };
+        const listenersData = (await listenersResponse.json()) as {
+          listeners: ManagedListener[];
+        };
 
-      setTickets(ticketsData.tickets);
-      setManagedSurveys(surveysData.surveys);
-      setManagedListeners(listenersData.listeners);
-    } catch (error) {
-      setAdminError(
-        error instanceof Error ? error.message : "Không thể tải dữ liệu.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+        setTickets(ticketsData.tickets);
+        setManagedSurveys(surveysData.surveys);
+        setManagedListeners(sortListeners(listenersData.listeners));
+        if (successToast) {
+          toast.success(successToast);
+        }
+      } catch (error) {
+        const message = errorMessage(error, "Không thể tải dữ liệu.");
+        setAdminError(message);
+        if (successToast) {
+          toast.error(message);
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [clearAdminState, readErrorMessage],
+  );
+
+  useEffect(() => {
+    let ignore = false;
+
+    const restoreSession = async () => {
+      try {
+        const response = await fetch("/api/admin/me", { cache: "no-store" });
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as { admin?: AdminProfile };
+        if (ignore || !data.admin) {
+          return;
+        }
+
+        setAdminProfile(data.admin);
+        setIsLoggedIn(true);
+        await loadData();
+      } catch {
+        if (!ignore) {
+          clearAdminState();
+        }
+      } finally {
+        if (!ignore) {
+          setCheckingSession(false);
+        }
+      }
+    };
+
+    void restoreSession();
+
+    return () => {
+      ignore = true;
+    };
+  }, [clearAdminState, loadData]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -166,6 +234,7 @@ export function AdminLogin() {
 
     setLoginError("");
     setLoading(true);
+    const toastId = toast.loading("Đang đăng nhập...");
 
     try {
       const response = await fetch("/api/admin/login", {
@@ -178,14 +247,20 @@ export function AdminLogin() {
         throw new Error(await readErrorMessage(response));
       }
 
+      const data = (await response.json()) as { admin?: AdminProfile };
+      if (data.admin) {
+        setAdminProfile(data.admin);
+      }
       setIsLoggedIn(true);
       await loadData();
+      toast.success("Đăng nhập thành công.", { id: toastId });
     } catch (error) {
-      setLoginError(
-        error instanceof Error
-          ? error.message
-          : "Sai tài khoản hoặc mật khẩu quản trị.",
+      const message = errorMessage(
+        error,
+        "Sai tài khoản hoặc mật khẩu quản trị.",
       );
+      setLoginError(message);
+      toast.error(message, { id: toastId });
     } finally {
       setLoading(false);
     }
@@ -209,6 +284,7 @@ export function AdminLogin() {
   ) => {
     await runWithActionLoading(actionKey, async () => {
       setAdminError("");
+      const toastId = toast.loading("Đang cập nhật phiếu...");
       try {
         const response = await fetch(
           `/api/admin/tickets/${encodeURIComponent(ticketCode)}`,
@@ -229,10 +305,16 @@ export function AdminLogin() {
             ticket.ticket_code === ticketCode ? data.ticket : ticket,
           ),
         );
-      } catch (error) {
-        setAdminError(
-          error instanceof Error ? error.message : "Không thể cập nhật phiếu.",
+        toast.success(
+          actionKey.endsWith(":reply")
+            ? "Đã lưu phản hồi phiếu."
+            : "Đã cập nhật phiếu.",
+          { id: toastId },
         );
+      } catch (error) {
+        const message = errorMessage(error, "Không thể cập nhật phiếu.");
+        setAdminError(message);
+        toast.error(message, { id: toastId });
       }
     });
   };
@@ -252,6 +334,7 @@ export function AdminLogin() {
 
   const handleDeleteTicket = async (ticketCode: string) => {
     setAdminError("");
+    const toastId = toast.loading("Đang xóa phiếu...");
     try {
       const response = await fetch(
         `/api/admin/tickets/${encodeURIComponent(ticketCode)}`,
@@ -265,10 +348,11 @@ export function AdminLogin() {
       setTickets((current) =>
         current.filter((ticket) => ticket.ticket_code !== ticketCode),
       );
+      toast.success("Đã xóa phiếu.", { id: toastId });
     } catch (error) {
-      setAdminError(
-        error instanceof Error ? error.message : "Không thể xóa phiếu.",
-      );
+      const message = errorMessage(error, "Không thể xóa phiếu.");
+      setAdminError(message);
+      toast.error(message, { id: toastId });
     }
   };
 
@@ -276,6 +360,7 @@ export function AdminLogin() {
     event.preventDefault();
     await runWithActionLoading("survey:create", async () => {
       setAdminError("");
+      const toastId = toast.loading("Đang tạo khảo sát...");
 
       try {
         const response = await fetch("/api/admin/surveys", {
@@ -291,10 +376,11 @@ export function AdminLogin() {
         const data = (await response.json()) as { survey: ManagedSurvey };
         setManagedSurveys((current) => [data.survey, ...current]);
         setSurveyDraft(defaultSurveyDraft());
+        toast.success("Đã tạo khảo sát.", { id: toastId });
       } catch (error) {
-        setAdminError(
-          error instanceof Error ? error.message : "Không thể tạo khảo sát.",
-        );
+        const message = errorMessage(error, "Không thể tạo khảo sát.");
+        setAdminError(message);
+        toast.error(message, { id: toastId });
       }
     });
   };
@@ -316,6 +402,7 @@ export function AdminLogin() {
   ) => {
     await runWithActionLoading(actionKey, async () => {
       setAdminError("");
+      const toastId = toast.loading("Đang lưu khảo sát...");
 
       try {
         const response = await fetch(
@@ -335,16 +422,18 @@ export function AdminLogin() {
         setManagedSurveys((current) =>
           current.map((item) => (item.id === survey.id ? data.survey : item)),
         );
+        toast.success("Đã lưu khảo sát.", { id: toastId });
       } catch (error) {
-        setAdminError(
-          error instanceof Error ? error.message : "Không thể lưu khảo sát.",
-        );
+        const message = errorMessage(error, "Không thể lưu khảo sát.");
+        setAdminError(message);
+        toast.error(message, { id: toastId });
       }
     });
   };
 
   const deleteSurvey = async (surveyId: string) => {
     setAdminError("");
+    const toastId = toast.loading("Đang xóa khảo sát...");
     try {
       const response = await fetch(
         `/api/admin/surveys/${encodeURIComponent(surveyId)}`,
@@ -358,10 +447,11 @@ export function AdminLogin() {
       setManagedSurveys((current) =>
         current.filter((survey) => survey.id !== surveyId),
       );
+      toast.success("Đã xóa khảo sát.", { id: toastId });
     } catch (error) {
-      setAdminError(
-        error instanceof Error ? error.message : "Không thể xóa khảo sát.",
-      );
+      const message = errorMessage(error, "Không thể xóa khảo sát.");
+      setAdminError(message);
+      toast.error(message, { id: toastId });
     }
   };
 
@@ -369,12 +459,19 @@ export function AdminLogin() {
     event.preventDefault();
     await runWithActionLoading("listener:create", async () => {
       setAdminError("");
+      const toastId = toast.loading("Đang tạo người phụ trách...");
 
       try {
+        const nextOrder =
+          managedListeners.reduce(
+            (highestOrder, listener) =>
+              Math.max(highestOrder, Number(listener.order) || 0),
+            0,
+          ) + 1;
         const response = await fetch("/api/admin/listeners", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(listenerDraft),
+          body: JSON.stringify({ ...listenerDraft, order: nextOrder }),
         });
 
         if (!response.ok) {
@@ -383,15 +480,14 @@ export function AdminLogin() {
 
         const data = (await response.json()) as { listener: ManagedListener };
         setManagedListeners((current) =>
-          [data.listener, ...current].sort((a, b) => a.order - b.order),
+          sortListeners([...current, data.listener]),
         );
         setListenerDraft(defaultListenerDraft());
+        toast.success("Đã tạo người phụ trách.", { id: toastId });
       } catch (error) {
-        setAdminError(
-          error instanceof Error
-            ? error.message
-            : "Không thể tạo người phụ trách.",
-        );
+        const message = errorMessage(error, "Không thể tạo người phụ trách.");
+        setAdminError(message);
+        toast.error(message, { id: toastId });
       }
     });
   };
@@ -413,6 +509,7 @@ export function AdminLogin() {
   ) => {
     await runWithActionLoading(actionKey, async () => {
       setAdminError("");
+      const toastId = toast.loading("Đang lưu người phụ trách...");
 
       try {
         const response = await fetch(
@@ -430,22 +527,95 @@ export function AdminLogin() {
 
         const data = (await response.json()) as { listener: ManagedListener };
         setManagedListeners((current) =>
-          current
-            .map((item) => (item.id === listener.id ? data.listener : item))
-            .sort((a, b) => a.order - b.order),
+          sortListeners(
+            current.map((item) =>
+              item.id === listener.id ? data.listener : item,
+            ),
+          ),
         );
+        toast.success("Đã lưu người phụ trách.", { id: toastId });
       } catch (error) {
-        setAdminError(
-          error instanceof Error
-            ? error.message
-            : "Không thể lưu người phụ trách.",
+        const message = errorMessage(error, "Không thể lưu người phụ trách.");
+        setAdminError(message);
+        toast.error(message, { id: toastId });
+      }
+    });
+  };
+
+  const moveListener = async (listenerId: string, direction: "up" | "down") => {
+    const orderedListeners = sortListeners(managedListeners);
+    const currentIndex = orderedListeners.findIndex(
+      (listener) => listener.id === listenerId,
+    );
+    const targetIndex =
+      direction === "up" ? currentIndex - 1 : currentIndex + 1;
+
+    if (
+      currentIndex < 0 ||
+      targetIndex < 0 ||
+      targetIndex >= orderedListeners.length
+    ) {
+      return;
+    }
+
+    await runWithActionLoading(`listener:${listenerId}:move`, async () => {
+      setAdminError("");
+      const previousListeners = managedListeners;
+      const toastId = toast.loading("Đang cập nhật thứ tự hiển thị...");
+      const reordered = [...orderedListeners];
+      const currentListener = reordered[currentIndex];
+      const targetListener = reordered[targetIndex];
+
+      reordered[currentIndex] = targetListener;
+      reordered[targetIndex] = currentListener;
+
+      const renumbered = reordered.map((listener, index) => ({
+        ...listener,
+        order: index + 1,
+      }));
+      const changedListeners = renumbered.filter((listener) => {
+        const previous = previousListeners.find(
+          (item) => item.id === listener.id,
         );
+        return previous?.order !== listener.order;
+      });
+
+      setManagedListeners(renumbered);
+
+      try {
+        await Promise.all(
+          changedListeners.map(async (listener) => {
+            const response = await fetch(
+              `/api/admin/listeners/${encodeURIComponent(listener.id)}`,
+              {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ order: listener.order }),
+              },
+            );
+
+            if (!response.ok) {
+              throw new Error(await readErrorMessage(response));
+            }
+          }),
+        );
+
+        toast.success("Đã cập nhật thứ tự hiển thị.", { id: toastId });
+      } catch (error) {
+        const message = errorMessage(
+          error,
+          "Không thể cập nhật thứ tự hiển thị.",
+        );
+        setManagedListeners(previousListeners);
+        setAdminError(message);
+        toast.error(message, { id: toastId });
       }
     });
   };
 
   const deleteListener = async (listenerId: string) => {
     setAdminError("");
+    const toastId = toast.loading("Đang xóa người phụ trách...");
     try {
       const response = await fetch(
         `/api/admin/listeners/${encodeURIComponent(listenerId)}`,
@@ -459,12 +629,11 @@ export function AdminLogin() {
       setManagedListeners((current) =>
         current.filter((listener) => listener.id !== listenerId),
       );
+      toast.success("Đã xóa người phụ trách.", { id: toastId });
     } catch (error) {
-      setAdminError(
-        error instanceof Error
-          ? error.message
-          : "Không thể xóa người phụ trách.",
-      );
+      const message = errorMessage(error, "Không thể xóa người phụ trách.");
+      setAdminError(message);
+      toast.error(message, { id: toastId });
     }
   };
 
@@ -521,13 +690,12 @@ export function AdminLogin() {
 
   const handleLogout = async () => {
     await runWithActionLoading("logout", async () => {
+      const toastId = toast.loading("Đang đăng xuất...");
       await fetch("/api/admin/login", { method: "DELETE" }).catch(
         () => undefined,
       );
-      setIsLoggedIn(false);
-      setTickets([]);
-      setManagedSurveys([]);
-      setManagedListeners([]);
+      clearAdminState();
+      toast.success("Đã đăng xuất.", { id: toastId });
     });
   };
 
@@ -590,6 +758,17 @@ export function AdminLogin() {
     isSurveyOpen(survey),
   ).length;
 
+  if (checkingSession) {
+    return (
+      <main className="site-canvas flex items-center justify-center p-4">
+        <div className="shine-card border-border flex items-center gap-3 border bg-white p-5 text-sm font-semibold shadow-xl">
+          <LoaderCircle className="text-primary size-5 animate-spin" />
+          Đang kiểm tra phiên đăng nhập
+        </div>
+      </main>
+    );
+  }
+
   if (!isLoggedIn) {
     return (
       <LoginForm
@@ -604,6 +783,7 @@ export function AdminLogin() {
     <main className="site-canvas text-foreground pb-6">
       <div className="mx-auto max-w-5xl px-3 py-4 sm:px-5">
         <DashboardHeader
+          adminDisplayName={adminProfile?.displayName ?? "Quản trị viên"}
           ticketCount={tickets.length}
           pendingCount={pendingCount}
           doneCount={doneCount}
@@ -612,7 +792,7 @@ export function AdminLogin() {
           loading={loading}
           isActionPending={isActionPending}
           onLogout={() => void handleLogout()}
-          onRefresh={() => void loadData()}
+          onRefresh={() => void loadData("Dữ liệu đã được làm mới.")}
         />
 
         <AdminTabs activeTab={activeTab} onChange={setActiveTab} />
@@ -631,7 +811,6 @@ export function AdminLogin() {
             isActionPending={isActionPending}
             onQueryChange={setQuery}
             onStatusFilterChange={setStatusFilter}
-            onExport={() => exportTickets(tickets)}
             onPatchDraft={patchTicketDraft}
             onSaveReply={(ticketCode) => void saveTicketReply(ticketCode)}
             onSavePatch={(ticketCode, patch, actionKey) =>
@@ -650,7 +829,6 @@ export function AdminLogin() {
             isActionPending={isActionPending}
             setSurveyDraft={setSurveyDraft}
             onCreateSurvey={(event) => void createSurvey(event)}
-            onExport={() => exportSurveys(managedSurveys)}
             surveyShareUrl={surveyShareUrl}
             onPatchDraft={patchSurveyDraft}
             onSave={(survey, actionKey) => void saveSurvey(survey, actionKey)}
@@ -658,23 +836,31 @@ export function AdminLogin() {
             onCopyQr={(surveyId) => void copySurveyQr(surveyId)}
             onDeleteRequest={setDeleteConfirm}
           />
-        ) : (
+        ) : activeTab === "listeners" ? (
           <ListenersTab
             listenerDraft={listenerDraft}
             listeners={managedListeners}
             isActionPending={isActionPending}
             setListenerDraft={setListenerDraft}
             onCreateListener={(event) => void createListener(event)}
-            onExport={() => exportListeners(managedListeners)}
             onPatchDraft={patchListenerDraft}
             onSave={(listener, actionKey) =>
               void saveListener(listener, actionKey)
+            }
+            onMove={(listenerId, direction) =>
+              void moveListener(listenerId, direction)
             }
             onToggleCategory={toggleListenerCategory}
             onToggleDraftCategory={toggleDraftCategory}
             onDeleteRequest={setDeleteConfirm}
           />
-        )}
+        ) : adminProfile ? (
+          <AccountTab
+            profile={adminProfile}
+            onProfileChange={setAdminProfile}
+            onUnauthorized={clearAdminState}
+          />
+        ) : null}
       </div>
       {deleteConfirm && (
         <DeleteDialog

@@ -28,6 +28,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import {
   normalizeTicketCode,
@@ -49,7 +50,7 @@ type BeforeInstallPromptEvent = Event & {
 const workflowSteps = [
   { label: "Chọn ngành", icon: ListChecks },
   { label: "Gửi góp ý", icon: MessageSquareText },
-  { label: "Nhận mã", icon: ShieldCheck },
+  { label: "Nhận mã - Nhập mã - Tìm kiếm", icon: ShieldCheck },
 ];
 const quickMessageIcons = {
   "today-happy": Smile,
@@ -89,6 +90,10 @@ function categoryMatchKeys(category: (typeof categories)[number]) {
     keys.add("hau can ky thuat");
     keys.add("hau can ki thuat");
   }
+  if (normalizedName.includes("chi huy")) {
+    keys.add("chi huy");
+    keys.add("chi huy lu doan");
+  }
 
   return keys;
 }
@@ -105,6 +110,10 @@ function listenerMatchesCategory(
   return listener.assigned_categories.some((assignedCategory) =>
     keys.has(normalizeMatchText(assignedCategory)),
   );
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }
 
 export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
@@ -213,17 +222,22 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!categoryId || !message.trim()) {
-      setErrorModal("Vui lòng chọn ngành phụ trách và nhập nội dung.");
+      const validationMessage =
+        "Vui lòng chọn ngành phụ trách và nhập nội dung.";
+      setErrorModal(validationMessage);
+      toast.error(validationMessage);
       return;
     }
     if (!isAnonymous && (!name.trim() || !unit.trim())) {
-      setErrorModal(
-        "Vui lòng nhập đầy đủ họ tên và đơn vị, hoặc chọn gửi ẩn danh.",
-      );
+      const validationMessage =
+        "Vui lòng nhập đầy đủ họ tên và đơn vị, hoặc chọn gửi ẩn danh.";
+      setErrorModal(validationMessage);
+      toast.error(validationMessage);
       return;
     }
 
     setIsSubmitting(true);
+    const toastId = toast.loading("Đang gửi nội dung góp ý...");
     try {
       const response = await fetch("/api/tickets", {
         method: "POST",
@@ -250,10 +264,11 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
       setName("");
       setUnit("");
       setIsAnonymous(false);
+      toast.success("Đã gửi nội dung góp ý.", { id: toastId });
     } catch (error) {
-      setErrorModal(
-        error instanceof Error ? error.message : "Không thể gửi nội dung.",
-      );
+      const message = errorMessage(error, "Không thể gửi nội dung.");
+      setErrorModal(message);
+      toast.error(message, { id: toastId });
     } finally {
       setIsSubmitting(false);
     }
@@ -272,6 +287,7 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
     const normalized = normalizeTicketCode(searchCode);
     if (!normalized) {
       setSearchResult("not-found");
+      toast.error("Vui lòng nhập mã phiếu cần tra cứu.");
       return;
     }
 
@@ -284,6 +300,7 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
 
       if (response.status === 404) {
         setSearchResult("not-found");
+        toast.error("Không tìm thấy mã phiếu.");
         return;
       }
 
@@ -294,9 +311,9 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
       const data = (await response.json()) as { ticket: StoredTicket };
       setSearchResult(data.ticket);
     } catch (error) {
-      setErrorModal(
-        error instanceof Error ? error.message : "Không thể tra cứu mã phiếu.",
-      );
+      const message = errorMessage(error, "Không thể tra cứu mã phiếu.");
+      setErrorModal(message);
+      toast.error(message);
     } finally {
       setIsSearching(false);
     }
@@ -311,9 +328,10 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
     }
 
     if (!installEvent) {
-      setErrorModal(
-        "Trình duyệt đã cài ứng dụng hoặc không hỗ trợ cài đặt tự động.",
-      );
+      const message =
+        "Trình duyệt đã cài ứng dụng hoặc không hỗ trợ cài đặt tự động.";
+      setErrorModal(message);
+      toast.error(message);
       return;
     }
 
@@ -334,7 +352,7 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
               <div className="mb-5 flex items-center justify-between gap-3">
                 <span className="lux-badge flex items-center gap-2 px-3 py-1 text-[10px] font-semibold tracking-[0.14em] text-(--military-cream) uppercase">
                   <ShieldCheck className="size-3" />
-                  Tiếp nhận bảo mật
+                  Tiếp nhận góp ý bảo mật
                 </span>
                 <Link
                   href="/quan-tri"
@@ -467,17 +485,14 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                     </div>
                   </div>
 
-                  <form
-                    className="shine-card reveal-up reveal-delay-2 flex flex-col gap-4"
-                    onSubmit={handleSubmit}
-                  >
-                    <div className="relative flex items-center gap-4 px-4 pt-4">
+                  <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+                    <div className="relative flex items-center gap-4 pt-4">
                       <ListChecks className="text-primary pointer-events-none z-10 size-5" />
                       <select
                         value={categoryId}
                         onChange={(event) => setCategoryId(event.target.value)}
                         required
-                        className="select select-bordered bg-base-100 h-10 w-full text-sm font-medium"
+                        className="select bg-base-100 h-10 w-full border text-sm font-medium outline-none"
                       >
                         <option value="" disabled>
                           Chọn ngành phụ trách
@@ -491,52 +506,50 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                     </div>
 
                     {assignedListeners.length > 0 && (
-                      <div className="px-4">
-                        <div className="rounded-box border-primary/10 bg-primary/5 border">
-                          <div className="p-4 pb-2">
-                            <h3 className="text-primary flex items-center gap-2 text-xs font-semibold tracking-[0.12em] uppercase">
-                              <Headphones className="size-4" />
-                              Người phụ trách lắng nghe
-                            </h3>
-                          </div>
-                          <div className="grid gap-2 p-4 pt-2">
-                            {assignedListeners.map((user) => (
-                              <div
-                                key={user.id}
-                                className="focus-lift rounded-box flex items-center justify-between gap-3 border border-white bg-white p-3 shadow-sm"
-                              >
-                                <div className="flex min-w-0 items-center gap-2">
-                                  <div className="bg-primary flex size-10 shrink-0 items-center justify-center rounded-full text-white">
-                                    <ShieldUser className="size-4" />
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="text-foreground truncate text-sm font-semibold">
-                                      {user.rank} {user.fullname}
-                                    </p>
-                                    <p className="text-muted-foreground text-xs leading-4 font-medium">
-                                      {user.position}
-                                    </p>
-                                  </div>
+                      <div className="rounded-box border-primary/10 bg-primary/5 border">
+                        <div className="p-4 pb-2">
+                          <h3 className="text-primary flex items-center gap-2 text-xs font-semibold tracking-[0.12em] uppercase">
+                            <Headphones className="size-4" />
+                            Người phụ trách lắng nghe
+                          </h3>
+                        </div>
+                        <div className="grid gap-2 p-2">
+                          {assignedListeners.map((user) => (
+                            <div
+                              key={user.id}
+                              className="focus-lift rounded-box flex items-center justify-between gap-3 border border-white bg-white p-1 shadow-sm"
+                            >
+                              <div className="flex min-w-0 items-center gap-2">
+                                <div className="bg-primary flex size-8 shrink-0 items-center justify-center rounded-full text-white">
+                                  <ShieldUser className="size-4" />
                                 </div>
-                                <a
-                                  href={`tel:${user.phone}`}
-                                  className="btn btn-outline btn-sm focus-lift shrink-0 border-emerald-100 bg-emerald-50 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                                >
-                                  <Phone className="size-3" />
-                                  Gọi
-                                </a>
+                                <div className="min-w-0">
+                                  <p className="text-foreground line-clamp-2 text-sm font-semibold break-all">
+                                    {user.rank} {user.fullname}
+                                  </p>
+                                  <p className="text-muted-foreground text-xs leading-4 font-medium">
+                                    {user.position}
+                                  </p>
+                                </div>
                               </div>
-                            ))}
-                          </div>
+                              <a
+                                href={`tel:${user.phone}`}
+                                className="btn btn-outline btn-sm focus-lift shrink-0 border-emerald-100 bg-emerald-50 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                              >
+                                <Phone className="size-3" />
+                                Gọi
+                              </a>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}
 
-                    <div className="px-4">
+                    <div>
                       <label className="border-border rounded-field text-foreground/85 flex cursor-pointer items-center gap-3 border bg-white p-3 text-sm font-semibold">
                         <input
                           type="checkbox"
-                          className="checkbox checkbox-primary z-10 size-5 border border-gray-300"
+                          className="checkbox checkbox-primary z-10 size-5 border border-gray-300 outline-none"
                           checked={isAnonymous}
                           onChange={(event) =>
                             setIsAnonymous(event.target.checked)
@@ -552,8 +565,11 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                     </div>
 
                     {!isAnonymous && (
-                      <div className="grid grid-cols-1 gap-3 overflow-hidden px-4 py-2 transition-all sm:grid-cols-2">
-                        <div className="relative">
+                      <div className="grid grid-cols-1 gap-3 overflow-hidden p-1 py-2 transition-all sm:grid-cols-2">
+                        <label className="floating-label relative">
+                          <span className="[inset-inline-start:2.75rem]">
+                            Họ tên
+                          </span>
                           <User className="text-muted-foreground/70 pointer-events-none absolute top-1/2 left-4 z-10 size-4 -translate-y-1/2" />
                           <input
                             type="text"
@@ -561,10 +577,13 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                             onChange={(event) => setName(event.target.value)}
                             required={!isAnonymous}
                             placeholder="Họ tên"
-                            className="input input-bordered border-border bg-muted focus:border-primary h-10 w-full pl-11 text-sm transition focus:bg-white"
+                            className="input bg-muted focus:border-primary h-10 w-full border pl-11 text-sm transition outline-none focus:bg-white"
                           />
-                        </div>
-                        <div className="relative">
+                        </label>
+                        <label className="floating-label relative">
+                          <span className="[inset-inline-start:2.75rem]">
+                            Đơn vị
+                          </span>
                           <Users className="text-muted-foreground/70 pointer-events-none absolute top-1/2 left-4 z-10 size-4 -translate-y-1/2" />
                           <input
                             type="text"
@@ -572,13 +591,16 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                             onChange={(event) => setUnit(event.target.value)}
                             required={!isAnonymous}
                             placeholder="Đơn vị"
-                            className="input input-bordered border-border bg-muted focus:border-primary h-10 w-full pl-11 text-sm transition focus:bg-white"
+                            className="input bg-muted focus:border-primary h-10 w-full border pl-11 text-sm transition outline-none focus:bg-white"
                           />
-                        </div>
+                        </label>
                       </div>
                     )}
-                    <div className="relative px-4">
-                      <PenLine className="text-muted-foreground/70 pointer-events-none absolute top-4 left-8 z-10 size-5" />
+                    <label className="floating-label relative block">
+                      <span className="[inset-inline-start:3rem]">
+                        Nội dung chi tiết
+                      </span>
+                      <PenLine className="text-muted-foreground/70 pointer-events-none absolute top-4 left-4 z-10 size-5" />
                       <textarea
                         ref={textareaRef}
                         value={message}
@@ -586,23 +608,21 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                         rows={7}
                         required
                         placeholder="Nội dung chi tiết..."
-                        className="textarea textarea-bordered border-border bg-muted text-foreground placeholder:text-muted-foreground/70 focus:border-primary min-h-36 w-full resize-y pl-12 text-sm leading-6 transition focus:bg-white"
+                        className="textarea bg-muted text-foreground placeholder:text-muted-foreground/70 focus:border-primary min-h-36 w-full resize-y border pl-12 text-sm leading-6 transition outline-none focus:bg-white"
                       />
-                    </div>
-                    <div className="px-4 pb-4">
-                      <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="btn btn-error focus-lift w-full border border-red-300/20 px-5 text-base font-semibold uppercase shadow-[0_18px_32px_-18px_rgba(165,20,34,0.55)]"
-                      >
-                        {isSubmitting ? (
-                          <LoaderCircle className="size-5 animate-spin" />
-                        ) : (
-                          <Send className="size-5" />
-                        )}
-                        {isSubmitting ? "Đang gửi" : "Gửi nội dung góp ý"}
-                      </button>
-                    </div>
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="btn btn-error focus-lift w-full border border-red-300/20 px-5 text-base font-semibold uppercase shadow-[0_18px_32px_-18px_rgba(165,20,34,0.55)]"
+                    >
+                      {isSubmitting ? (
+                        <LoaderCircle className="size-5 animate-spin" />
+                      ) : (
+                        <Send className="size-5" />
+                      )}
+                      {isSubmitting ? "Đang gửi" : "Gửi nội dung góp ý"}
+                    </button>
                   </form>
                 </div>
               )}
@@ -619,17 +639,20 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                   </div>
 
                   <form className="space-y-3" onSubmit={handleSearch}>
-                    <div className="relative">
-                      <Search className="text-primary pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2" />
+                    <label className="floating-label relative block">
+                      <span className="[inset-inline-start:3rem]">
+                        Mã phiếu
+                      </span>
+                      <Search className="text-primary pointer-events-none absolute top-1/2 left-4 z-10 size-5 -translate-y-1/2" />
                       <input
                         type="text"
                         value={searchCode}
                         onChange={(event) => setSearchCode(event.target.value)}
                         disabled={isSearching}
                         placeholder="GP-...."
-                        className="input input-bordered border-border bg-muted text-destructive focus:border-primary h-12 w-full pl-12 text-center font-mono text-2xl font-semibold tracking-widest uppercase focus:bg-white"
+                        className="input bg-muted text-destructive focus:border-primary h-12 w-full border pl-12 text-center font-mono text-2xl font-semibold tracking-widest uppercase outline-none focus:bg-white"
                       />
-                    </div>
+                    </label>
                     <button
                       disabled={isSearching}
                       className="btn btn-primary focus-lift w-full text-base font-semibold uppercase shadow-lg shadow-green-950/20"

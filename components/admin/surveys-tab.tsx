@@ -3,7 +3,6 @@
 import {
   CalendarClock,
   Copy,
-  Download,
   ExternalLink,
   LinkIcon,
   LoaderCircle,
@@ -15,7 +14,6 @@ import {
 import Link from "next/link";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
 
-import { RetryableQrImage } from "@/components/retryable-qr-image";
 import type {
   DeleteConfirm,
   IsActionPending,
@@ -23,6 +21,7 @@ import type {
   SurveyPatch,
 } from "@/components/admin/types";
 import { toSurveyDateTimeInput } from "@/components/admin/utils";
+import { RetryableQrImage } from "@/components/retryable-qr-image";
 import { isSurveyOpen, type ManagedSurvey } from "@/lib/data-models";
 
 type SurveysTabProps = {
@@ -35,7 +34,6 @@ type SurveysTabProps = {
   isActionPending: IsActionPending;
   setSurveyDraft: Dispatch<SetStateAction<SurveyDraft>>;
   onCreateSurvey: (event: FormEvent<HTMLFormElement>) => void;
-  onExport: () => void;
   surveyShareUrl: (surveyId: string) => string;
   onPatchDraft: (surveyId: string, patch: SurveyPatch) => void;
   onSave: (survey: ManagedSurvey, actionKey?: string) => void;
@@ -54,7 +52,6 @@ export function SurveysTab({
   isActionPending,
   setSurveyDraft,
   onCreateSurvey,
-  onExport,
   surveyShareUrl,
   onPatchDraft,
   onSave,
@@ -75,33 +72,39 @@ export function SurveysTab({
           </h2>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <input
-            value={surveyDraft.title}
-            onChange={(event) =>
-              setSurveyDraft((current) => ({
-                ...current,
-                title: event.target.value,
-              }))
-            }
-            required
-            placeholder="Tên khảo sát"
-            className="input input-bordered border-border bg-muted focus:border-primary h-10 w-full text-sm"
-          />
-          <input
-            value={surveyDraft.target_url}
-            onChange={(event) =>
-              setSurveyDraft((current) => ({
-                ...current,
-                target_url: event.target.value,
-              }))
-            }
-            required
-            placeholder="Link Google Form hoặc biểu mẫu"
-            className="input input-bordered border-border bg-muted focus:border-primary h-10 w-full text-sm"
-          />
+          <label className="floating-label">
+            <span>Tên khảo sát</span>
+            <input
+              value={surveyDraft.title}
+              onChange={(event) =>
+                setSurveyDraft((current) => ({
+                  ...current,
+                  title: event.target.value,
+                }))
+              }
+              required
+              placeholder="Tên khảo sát"
+              className="input bg-muted focus:border-primary h-10 w-full border text-sm outline-none"
+            />
+          </label>
+          <label className="floating-label">
+            <span>Link Google Form hoặc biểu mẫu</span>
+            <input
+              value={surveyDraft.target_url}
+              onChange={(event) =>
+                setSurveyDraft((current) => ({
+                  ...current,
+                  target_url: event.target.value,
+                }))
+              }
+              required
+              placeholder="Link Google Form hoặc biểu mẫu"
+              className="input bg-muted focus:border-primary h-10 w-full border text-sm outline-none"
+            />
+          </label>
           <div className="grid gap-2 sm:col-span-2 sm:grid-cols-2 sm:gap-3">
-            <label className="text-muted-foreground/70 min-w-0 text-xs font-semibold tracking-[0.12em] uppercase">
-              Bắt đầu
+            <label className="floating-label min-w-0">
+              <span>Bắt đầu</span>
               <input
                 type="datetime-local"
                 value={surveyDraft.start_date}
@@ -112,11 +115,12 @@ export function SurveysTab({
                   }))
                 }
                 required
-                className="input input-bordered border-border bg-muted text-foreground focus:border-primary mt-1 h-10 w-full min-w-0 px-2 text-xs font-bold sm:px-3 sm:text-sm"
+                placeholder="Bắt đầu"
+                className="input bg-muted text-foreground focus:border-primary h-10 w-full min-w-0 border px-2 text-xs font-bold outline-none sm:px-3 sm:text-sm"
               />
             </label>
-            <label className="text-muted-foreground/70 min-w-0 text-xs font-semibold tracking-[0.12em] uppercase">
-              Kết thúc
+            <label className="floating-label min-w-0">
+              <span>Kết thúc</span>
               <input
                 type="datetime-local"
                 value={surveyDraft.end_date}
@@ -127,27 +131,31 @@ export function SurveysTab({
                   }))
                 }
                 required
-                className="input input-bordered border-border bg-muted text-foreground focus:border-primary mt-1 h-10 w-full min-w-0 px-2 text-xs font-bold sm:px-3 sm:text-sm"
+                placeholder="Kết thúc"
+                className="input bg-muted text-foreground focus:border-primary h-10 w-full min-w-0 border px-2 text-xs font-bold outline-none sm:px-3 sm:text-sm"
               />
             </label>
           </div>
-          <textarea
-            value={surveyDraft.description}
-            onChange={(event) =>
-              setSurveyDraft((current) => ({
-                ...current,
-                description: event.target.value,
-              }))
-            }
-            rows={3}
-            placeholder="Mô tả ngắn"
-            className="textarea textarea-bordered border-border bg-muted focus:border-primary min-h-24 w-full text-sm sm:col-span-2"
-          />
+          <label className="floating-label sm:col-span-2">
+            <span>Mô tả ngắn</span>
+            <textarea
+              value={surveyDraft.description}
+              onChange={(event) =>
+                setSurveyDraft((current) => ({
+                  ...current,
+                  description: event.target.value,
+                }))
+              }
+              rows={3}
+              placeholder="Mô tả ngắn"
+              className="textarea bg-muted focus:border-primary min-h-24 w-full border text-sm outline-none"
+            />
+          </label>
         </div>
         <label className="text-foreground/85 mt-3 flex items-center gap-2 text-sm font-bold">
           <input
             type="checkbox"
-            className="checkbox checkbox-primary checkbox-xs border border-gray-300"
+            className="checkbox checkbox-primary checkbox-xs border border-gray-300 outline-none"
             checked={surveyDraft.is_enabled}
             onChange={(event) =>
               setSurveyDraft((current) => ({
@@ -171,17 +179,6 @@ export function SurveysTab({
         </button>
       </form>
 
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={onExport}
-          className="btn btn-primary focus-lift gap-2 px-4 text-sm font-semibold uppercase"
-        >
-          <Download className="size-4" />
-          Xuất danh sách
-        </button>
-      </div>
-
       {surveys.length === 0 ? (
         <p className="shine-card text-muted-foreground/70 p-6 text-center text-sm font-bold">
           Chưa có khảo sát nào.
@@ -197,14 +194,6 @@ export function SurveysTab({
               className="shine-card focus-lift border-border border bg-white p-4 shadow-sm"
             >
               <div className="border-border/60 mb-3 flex flex-col gap-2 border-b pb-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <strong className="text-foreground block text-base font-semibold">
-                    {survey.title || "Chưa đặt tên"}
-                  </strong>
-                  <span className="text-muted-foreground/70 font-mono text-[11px] font-bold uppercase">
-                    {survey.id}
-                  </span>
-                </div>
                 <span
                   className={`rounded-field w-fit border px-3 py-1 text-xs font-semibold uppercase ${
                     open
@@ -214,30 +203,46 @@ export function SurveysTab({
                 >
                   {open ? "Đang mở" : "Không hiển thị"}
                 </span>
+                <div>
+                  <strong className="text-foreground block text-base font-semibold">
+                    {survey.title || "Chưa đặt tên"}
+                  </strong>
+                  <span className="text-muted-foreground/70 sr-only font-mono text-[11px] font-bold uppercase">
+                    {survey.id}
+                  </span>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <input
-                  value={survey.title}
-                  onChange={(event) =>
-                    onPatchDraft(survey.id, {
-                      title: event.target.value,
-                    })
-                  }
-                  className="input input-bordered border-border bg-muted focus:border-primary h-10 w-full text-sm font-bold"
-                />
-                <input
-                  value={survey.target_url}
-                  onChange={(event) =>
-                    onPatchDraft(survey.id, {
-                      target_url: event.target.value,
-                    })
-                  }
-                  className="input input-bordered border-border bg-muted focus:border-primary h-10 w-full text-sm"
-                />
+                <label className="floating-label">
+                  <span>Tên khảo sát</span>
+                  <input
+                    value={survey.title}
+                    onChange={(event) =>
+                      onPatchDraft(survey.id, {
+                        title: event.target.value,
+                      })
+                    }
+                    placeholder="Tên khảo sát"
+                    className="input bg-muted focus:border-primary h-10 w-full border text-sm font-bold outline-none"
+                  />
+                </label>
+                <label className="floating-label">
+                  <span>Link Google Form hoặc biểu mẫu</span>
+                  <input
+                    value={survey.target_url}
+                    onChange={(event) =>
+                      onPatchDraft(survey.id, {
+                        target_url: event.target.value,
+                      })
+                    }
+                    placeholder="Link Google Form hoặc biểu mẫu"
+                    className="input bg-muted focus:border-primary h-10 w-full border text-sm outline-none"
+                  />
+                </label>
                 <div className="grid gap-2 sm:col-span-2 sm:grid-cols-2 sm:gap-3">
-                  <label className="text-muted-foreground/70 min-w-0 text-xs font-semibold tracking-[0.12em] uppercase">
-                    Bắt đầu
+                  <label className="floating-label min-w-0">
+                    <span>Bắt đầu</span>
                     <input
                       type="datetime-local"
                       value={toSurveyDateTimeInput(survey.start_date, "start")}
@@ -246,11 +251,12 @@ export function SurveysTab({
                           start_date: event.target.value,
                         })
                       }
-                      className="input input-bordered border-border bg-muted text-foreground focus:border-primary mt-1 h-10 w-full min-w-0 px-2 text-xs font-bold sm:px-3 sm:text-sm"
+                      placeholder="Bắt đầu"
+                      className="input bg-muted text-foreground focus:border-primary h-10 w-full min-w-0 border px-2 text-xs font-bold outline-none sm:px-3 sm:text-sm"
                     />
                   </label>
-                  <label className="text-muted-foreground/70 min-w-0 text-xs font-semibold tracking-[0.12em] uppercase">
-                    Kết thúc
+                  <label className="floating-label min-w-0">
+                    <span>Kết thúc</span>
                     <input
                       type="datetime-local"
                       value={toSurveyDateTimeInput(survey.end_date, "end")}
@@ -259,20 +265,25 @@ export function SurveysTab({
                           end_date: event.target.value,
                         })
                       }
-                      className="input input-bordered border-border bg-muted text-foreground focus:border-primary mt-1 h-10 w-full min-w-0 px-2 text-xs font-bold sm:px-3 sm:text-sm"
+                      placeholder="Kết thúc"
+                      className="input bg-muted text-foreground focus:border-primary h-10 w-full min-w-0 border px-2 text-xs font-bold outline-none sm:px-3 sm:text-sm"
                     />
                   </label>
                 </div>
-                <textarea
-                  value={survey.description}
-                  onChange={(event) =>
-                    onPatchDraft(survey.id, {
-                      description: event.target.value,
-                    })
-                  }
-                  rows={3}
-                  className="textarea textarea-bordered border-border bg-muted focus:border-primary min-h-24 w-full text-sm sm:col-span-2"
-                />
+                <label className="floating-label sm:col-span-2">
+                  <span>Mô tả ngắn</span>
+                  <textarea
+                    value={survey.description}
+                    onChange={(event) =>
+                      onPatchDraft(survey.id, {
+                        description: event.target.value,
+                      })
+                    }
+                    rows={3}
+                    placeholder="Mô tả ngắn"
+                    className="textarea bg-muted focus:border-primary min-h-24 w-full border text-sm outline-none"
+                  />
+                </label>
               </div>
 
               <div className="border-border/60 bg-muted rounded-box mt-3 border p-4">

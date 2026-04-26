@@ -33,6 +33,10 @@ export const logoPath = "/logo-ludoan234.png";
 
 export const categories: Category[] = [
   {
+    id: "691edfd3b65c2",
+    name: "Chỉ huy lữ đoàn",
+  },
+  {
     id: "696edfd3b65ce",
     name: "Công tác quân sự",
   },

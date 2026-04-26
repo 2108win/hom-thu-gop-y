@@ -1,7 +1,11 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { adminCookieName, createAdminSessionValue } from "@/lib/admin-auth";
+import {
+  adminCookieName,
+  adminSessionMaxAgeSeconds,
+  createAdminSessionValue,
+} from "@/lib/admin-auth";
 import { jsonError } from "@/lib/api-utils";
 import {
   adminAccountStoreName,
@@ -48,11 +52,17 @@ export async function POST(request: Request) {
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
         path: "/",
-        maxAge: 60 * 60 * 8,
+        maxAge: adminSessionMaxAgeSeconds,
       },
     );
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({
+      ok: true,
+      admin: {
+        username: auth.username,
+        displayName: auth.displayName,
+      },
+    });
   } catch (error) {
     return jsonError(error, "Không thể đăng nhập quản trị.");
   }
@@ -60,7 +70,13 @@ export async function POST(request: Request) {
 
 export async function DELETE() {
   const cookieStore = await cookies();
-  cookieStore.delete(adminCookieName);
+  cookieStore.set(adminCookieName, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 0,
+  });
 
   return NextResponse.json({ ok: true });
 }

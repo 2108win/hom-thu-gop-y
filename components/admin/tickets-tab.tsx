@@ -2,7 +2,6 @@
 
 import {
   CheckCircle2,
-  Download,
   LoaderCircle,
   MessageSquareReply,
   Search,
@@ -26,7 +25,6 @@ type TicketsTabProps = {
   isActionPending: IsActionPending;
   onQueryChange: (value: string) => void;
   onStatusFilterChange: (value: StatusFilter) => void;
-  onExport: () => void;
   onPatchDraft: (ticketCode: string, patch: TicketPatch) => void;
   onSaveReply: (ticketCode: string) => void;
   onSavePatch: (
@@ -44,7 +42,6 @@ export function TicketsTab({
   isActionPending,
   onQueryChange,
   onStatusFilterChange,
-  onExport,
   onPatchDraft,
   onSaveReply,
   onSavePatch,
@@ -52,35 +49,28 @@ export function TicketsTab({
 }: TicketsTabProps) {
   return (
     <>
-      <section className="shine-card mb-3 grid grid-cols-1 gap-2 p-3 shadow-sm sm:grid-cols-[1fr_auto_auto]">
-        <div className="relative">
-          <Search className="text-muted-foreground/70 pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+      <section className="shine-card mb-3 grid grid-cols-1 gap-2 p-3 shadow-sm sm:grid-cols-[1fr_auto]">
+        <label className="floating-label relative">
+          <span className="[inset-inline-start:2.5rem]">Tìm kiếm</span>
+          <Search className="text-muted-foreground/70 pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2" />
           <input
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Tìm theo mã, nhóm, nội dung, người gửi..."
-            className="input input-bordered border-border bg-muted focus:border-primary h-10 w-full pr-3 pl-10 text-sm focus:bg-white"
+            className="input bg-muted focus:border-primary h-10 w-full border pr-3 pl-10 text-sm outline-none focus:bg-white"
           />
-        </div>
+        </label>
         <select
           value={statusFilter}
           onChange={(event) =>
             onStatusFilterChange(event.target.value as StatusFilter)
           }
-          className="select select-bordered bg-base-100 h-10 w-full text-sm font-medium sm:w-48"
+          className="select bg-base-100 h-10 w-full border text-sm font-medium outline-none sm:w-48"
         >
           <option value="all">Tất cả trạng thái</option>
           <option value="pending">Đang chờ</option>
           <option value="done">Đã xử lý</option>
         </select>
-        <button
-          type="button"
-          onClick={onExport}
-          className="btn btn-primary focus-lift gap-2 px-4 text-sm font-semibold uppercase"
-        >
-          <Download className="size-4" />
-          Xuất CSV
-        </button>
       </section>
 
       <section className="space-y-3">
@@ -154,10 +144,8 @@ export function TicketsTab({
                 </p>
               </div>
 
-              <label className="mb-3 block">
-                <span className="text-muted-foreground/70 mb-1 block text-[10px] font-semibold tracking-[0.12em] uppercase">
-                  Phản hồi xử lý
-                </span>
+              <label className="floating-label mb-3 block">
+                <span>Phản hồi xử lý</span>
                 <textarea
                   value={ticket.admin_reply ?? ""}
                   onChange={(event) =>
@@ -167,7 +155,7 @@ export function TicketsTab({
                   }
                   rows={3}
                   placeholder="Nhập nội dung phản hồi để người gửi tra cứu..."
-                  className="textarea textarea-bordered border-border focus:border-primary min-h-24 w-full resize-none bg-white text-sm leading-6"
+                  className="textarea focus:border-primary min-h-24 w-full resize-none border bg-white text-sm leading-6 outline-none"
                 />
               </label>
 

@@ -2,6 +2,7 @@ import { ServiceWorkerRegistrar } from "@/components/service-worker-registrar";
 import { FixedFooter, MarqueeBar } from "@/components/site-frame";
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const roboto = Roboto({
@@ -31,6 +32,7 @@ export default function RootLayout({
         <MarqueeBar />
         {children}
         <ServiceWorkerRegistrar />
+        <Toaster closeButton richColors position="top-right" />
         <FixedFooter />
       </body>
     </html>

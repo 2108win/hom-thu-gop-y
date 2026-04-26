@@ -3,10 +3,15 @@
 import { CheckCircle, LoaderCircle, Send } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { toast } from "sonner";
 
 import { BackButton, UnitHeader } from "@/components/site-frame";
 import type { StoredSurveyResponse, SurveyAnswer } from "@/lib/data-models";
 import type { Survey } from "@/lib/site-data";
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export function SurveyForm({ survey }: { survey?: Survey }) {
   const [success, setSuccess] = useState(false);
@@ -66,11 +71,14 @@ export function SurveyForm({ survey }: { survey?: Survey }) {
     );
 
     if (missingAnswer) {
-      setErrorMessage("Vui lòng trả lời đầy đủ các câu hỏi khảo sát.");
+      const validationMessage = "Vui lòng trả lời đầy đủ các câu hỏi khảo sát.";
+      setErrorMessage(validationMessage);
+      toast.error(validationMessage);
       return;
     }
 
     setSubmitting(true);
+    const toastId = toast.loading("Đang gửi kết quả khảo sát...");
     const answers = survey.questions.map(
       (question, questionIndex) =>
         ({
@@ -100,12 +108,11 @@ export function SurveyForm({ survey }: { survey?: Survey }) {
       };
       setResponseCode(data.response.response_code);
       setSuccess(true);
+      toast.success("Đã gửi kết quả khảo sát.", { id: toastId });
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Không thể gửi kết quả khảo sát.",
-      );
+      const message = getErrorMessage(error, "Không thể gửi kết quả khảo sát.");
+      setErrorMessage(message);
+      toast.error(message, { id: toastId });
     } finally {
       setSubmitting(false);
     }
@@ -176,7 +183,7 @@ export function SurveyForm({ survey }: { survey?: Survey }) {
                               [questionIndex]: option,
                             }))
                           }
-                          className="radio radio-primary"
+                          className="radio radio-primary outline-none"
                         />
                         <span className="min-w-0">{option}</span>
                       </label>

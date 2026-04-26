@@ -18,6 +18,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useSyncExternalStore } from "react";
+import { toast } from "sonner";
 
 import { RetryableQrImage } from "@/components/retryable-qr-image";
 import type { ManagedSurvey } from "@/lib/data-models";
@@ -54,6 +55,10 @@ function formatSurveyDate(value: string, boundary: "start" | "end") {
   return `${day}/${month}/${year} ${time}`;
 }
 
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export function SurveyList({
   initialSurveys,
   initialError = "",
@@ -81,6 +86,7 @@ export function SurveyList({
   async function loadSurveys() {
     setLoading(true);
     setError("");
+    const toastId = toast.loading("Đang tải danh sách khảo sát...");
 
     try {
       const response = await fetch("/api/surveys", { cache: "no-store" });
@@ -97,12 +103,14 @@ export function SurveyList({
 
       const data = (await response.json()) as { surveys: ManagedSurvey[] };
       setSurveys(data.surveys);
+      toast.success("Đã cập nhật danh sách khảo sát.", { id: toastId });
     } catch (loadError) {
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Không thể tải danh sách khảo sát.",
+      const message = errorMessage(
+        loadError,
+        "Không thể tải danh sách khảo sát.",
       );
+      setError(message);
+      toast.error(message, { id: toastId });
     } finally {
       setLoading(false);
     }
@@ -118,8 +126,17 @@ export function SurveyList({
 
   async function copySurveyLink(survey: ManagedSurvey) {
     const url = surveyUrl(survey.id);
-    await navigator.clipboard?.writeText(url).catch(() => undefined);
+    try {
+      if (!navigator.clipboard) {
+        throw new Error("Clipboard unavailable");
+      }
+      await navigator.clipboard?.writeText(url);
+    } catch {
+      toast.error("Không thể sao chép link.");
+      return;
+    }
     setCopiedId(survey.id);
+    toast.success("Đã sao chép link khảo sát.");
     window.setTimeout(() => setCopiedId(""), 1600);
   }
 
@@ -130,9 +147,11 @@ export function SurveyList({
     try {
       await copyQrImageToClipboard(surveyUrl(survey.id));
       setCopiedQrId(survey.id);
+      toast.success("Đã sao chép mã QR.");
       window.setTimeout(() => setCopiedQrId(""), 1600);
     } catch {
       setQrCopyErrorId(survey.id);
+      toast.error("Không thể sao chép mã QR.");
       window.setTimeout(() => setQrCopyErrorId(""), 2200);
     } finally {
       setCopyingQrId("");

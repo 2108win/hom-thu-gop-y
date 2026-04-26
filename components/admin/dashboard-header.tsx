@@ -9,6 +9,7 @@ import {
   LogOut,
   RefreshCcw,
   ShieldCheck,
+  UserRound,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -16,6 +17,7 @@ import type { IsActionPending } from "@/components/admin/types";
 import { unitName } from "@/lib/site-data";
 
 type DashboardHeaderProps = {
+  adminDisplayName: string;
   ticketCount: number;
   pendingCount: number;
   doneCount: number;
@@ -28,6 +30,7 @@ type DashboardHeaderProps = {
 };
 
 export function DashboardHeader({
+  adminDisplayName,
   ticketCount,
   pendingCount,
   doneCount,
@@ -39,8 +42,21 @@ export function DashboardHeader({
   onRefresh,
 }: DashboardHeaderProps) {
   return (
-    <header className="command-hero hero-panel mb-4 p-4 text-white shadow-xl shadow-green-950/20">
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <header className="command-hero hero-panel mb-4 flex flex-col gap-4 p-4 text-white shadow-xl shadow-green-950/20">
+      <button
+        type="button"
+        onClick={onLogout}
+        disabled={isActionPending("logout")}
+        className="btn btn-accent btn-sm focus-lift gap-2 px-3 text-xs font-semibold uppercase"
+      >
+        {isActionPending("logout") ? (
+          <LoaderCircle className="size-4 animate-spin" />
+        ) : (
+          <LogOut className="size-4" />
+        )}
+        {isActionPending("logout") ? "Đang thoát" : "Thoát"}
+      </button>
+      <div className="mb-4 flex flex-col flex-wrap gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-[10px] font-semibold tracking-[0.18em] text-(--military-medal-soft) uppercase">
             {unitName}
@@ -51,6 +67,10 @@ export function DashboardHeader({
           <p className="text-xs text-white/70">
             Quản lý góp ý, phản hồi xử lý và danh sách khảo sát.
           </p>
+          <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-white/80">
+            <UserRound className="size-3.5" />
+            {adminDisplayName}
+          </p>
         </div>
         <div className="flex gap-2">
           <Link
@@ -60,20 +80,6 @@ export function DashboardHeader({
             <Home className="size-4" />
             Trang chính
           </Link>
-
-          <button
-            type="button"
-            onClick={onLogout}
-            disabled={isActionPending("logout")}
-            className="btn btn-accent btn-sm focus-lift gap-2 px-3 text-xs font-semibold uppercase"
-          >
-            {isActionPending("logout") ? (
-              <LoaderCircle className="size-4 animate-spin" />
-            ) : (
-              <LogOut className="size-4" />
-            )}
-            {isActionPending("logout") ? "Đang thoát" : "Thoát"}
-          </button>
           <button
             type="button"
             onClick={onRefresh}

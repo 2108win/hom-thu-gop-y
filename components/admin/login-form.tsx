@@ -24,19 +24,25 @@ export function LoginForm({ loading, loginError, onSubmit }: LoginFormProps) {
         <h2 className="text-primary mb-2 text-xl font-semibold uppercase">
           Quản trị viên
         </h2>
-        <input
-          name="user"
-          placeholder="Tên đăng nhập"
-          required
-          className="input input-bordered border-border bg-muted focus:border-primary mb-3 h-10 w-full border p-3 outline-none focus:bg-white"
-        />
-        <input
-          name="pass"
-          type="password"
-          placeholder="Mật khẩu"
-          required
-          className="input input-bordered border-border bg-muted focus:border-primary mb-5 h-10 w-full border p-3 outline-none focus:bg-white"
-        />
+        <label className="floating-label mb-3 block">
+          <span>Tên đăng nhập</span>
+          <input
+            name="user"
+            placeholder="Tên đăng nhập"
+            required
+            className="input bg-muted focus:border-primary h-10 w-full border p-3 outline-none focus:bg-white"
+          />
+        </label>
+        <label className="floating-label mb-5 block">
+          <span>Mật khẩu</span>
+          <input
+            name="pass"
+            type="password"
+            placeholder="Mật khẩu"
+            required
+            className="input bg-muted focus:border-primary h-10 w-full border p-3 outline-none focus:bg-white"
+          />
+        </label>
         {loginError && (
           <p className="rounded-field mb-4 border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-700">
             {loginError}

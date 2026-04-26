@@ -61,26 +61,3 @@ export function defaultListenerDraft(): ListenerDraft {
     is_enabled: true,
   };
 }
-
-function csvCell(value: string | number | boolean | undefined) {
-  const text = String(value ?? "");
-  return `"${text.replaceAll('"', '""')}"`;
-}
-
-export function downloadCsv(
-  filename: string,
-  rows: Array<Array<string | number | boolean | undefined>>,
-) {
-  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
-  const blob = new Blob(["\uFEFF", csv], {
-    type: "text/csv;charset=utf-8;",
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
