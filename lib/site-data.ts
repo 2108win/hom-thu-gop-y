@@ -28,7 +28,7 @@ export const appName = "Hòm thư góp ý - LỮ ĐOÀN PPK234";
 export const unitName = "LỮ ĐOÀN PPK234";
 export const slogan =
   'ĐOÀN TAM ĐẢO ANH HÙNG "CÓ LỆNH LÀ ĐI, CÓ ĐỊCH LÀ ĐÁNH, ĐÃ ĐÁNH LÀ THẮNG"';
-export const footerName = "Mai Thanh Tuấn";
+export const footerName = "Trung tá MAI THANH TUẤN - PCNCT";
 export const logoPath = "/logo-ludoan234.png";
 
 export const categories: Category[] = [

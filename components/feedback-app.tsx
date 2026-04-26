@@ -213,7 +213,7 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!categoryId || !message.trim()) {
-      setErrorModal("Vui lòng chọn ngành nghề phụ trách và nhập nội dung.");
+      setErrorModal("Vui lòng chọn ngành phụ trách và nhập nội dung.");
       return;
     }
     if (!isAnonymous && (!name.trim() || !unit.trim())) {
@@ -480,7 +480,7 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                         className="select select-bordered bg-base-100 h-10 w-full text-sm font-medium"
                       >
                         <option value="" disabled>
-                          Chọn ngành nghề phụ trách
+                          Chọn ngành phụ trách
                         </option>
                         {categories.map((category) => (
                           <option key={category.id} value={category.id}>

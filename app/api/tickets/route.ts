@@ -2,10 +2,7 @@ import { NextResponse } from "next/server";
 
 import { badRequest, jsonError } from "@/lib/api-utils";
 import { createTicket } from "@/lib/data-models";
-import {
-  appendTicket,
-  createUniqueTicketCode,
-} from "@/lib/data-store";
+import { appendTicket, createUniqueTicketCode } from "@/lib/data-store";
 import { checkRateLimit, getClientRateLimitKey } from "@/lib/rate-limit";
 import { categories } from "@/lib/site-data";
 
@@ -45,7 +42,7 @@ export async function POST(request: Request) {
       !categoryId ||
       !categories.some((category) => category.id === categoryId)
     ) {
-      return badRequest("Vui lòng chọn ngành nghề phụ trách hợp lệ.");
+      return badRequest("Vui lòng chọn ngành phụ trách hợp lệ.");
     }
 
     if (!message) {
