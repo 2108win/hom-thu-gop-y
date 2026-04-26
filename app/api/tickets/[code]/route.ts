@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { jsonError } from "@/lib/api-utils";
-import { findTicket } from "@/lib/google-sheets-store";
+import { findTicket } from "@/lib/data-store";
 import { checkRateLimit, getClientRateLimitKey } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";

@@ -20,7 +20,6 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useSyncExternalStore } from "react";
 
 import { RetryableQrImage } from "@/components/retryable-qr-image";
-import { FixedFooter, MarqueeBar } from "@/components/site-frame";
 import type { ManagedSurvey } from "@/lib/data-models";
 import { copyQrImageToClipboard } from "@/lib/qr-clipboard";
 import { appName, logoPath, unitName } from "@/lib/site-data";
@@ -141,9 +140,7 @@ export function SurveyList({
   }
 
   return (
-    <main className="site-canvas bg-background text-foreground flex min-h-dvh flex-col">
-      <MarqueeBar />
-
+    <main className="site-canvas text-foreground flex flex-col">
       <div className="flex-1">
         <header className="command-hero border-b-4 border-(--military-medal) text-white shadow-sm">
           <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-5">
@@ -352,8 +349,6 @@ export function SurveyList({
           )}
         </section>
       </div>
-
-      <FixedFooter />
     </main>
   );
 }

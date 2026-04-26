@@ -1,16 +1,6 @@
-export type ListenerUser = {
-  id: string;
-  fullname: string;
-  rank: string;
-  position: string;
-  phone: string;
-  order: number;
-};
-
 export type Category = {
   id: string;
   name: string;
-  assigned: string[];
 };
 
 export type SurveyQuestion = {
@@ -36,90 +26,50 @@ export type QuickTemplate = {
 
 export const appName = "Hòm thư góp ý - LỮ ĐOÀN PPK234";
 export const unitName = "LỮ ĐOÀN PPK234";
-export const slogan = "CÓ LỆNH LÀ ĐI, CÓ ĐỊCH LÀ ĐÁNH, ĐÃ ĐÁNH LÀ THẮNG";
+export const slogan =
+  'ĐOÀN TAM ĐẢO ANH HÙNG "CÓ LỆNH LÀ ĐI, CÓ ĐỊCH LÀ ĐÁNH, ĐÃ ĐÁNH LÀ THẮNG"';
 export const footerName = "Mai Thanh Tuấn";
 export const logoPath = "/logo-ludoan234.png";
 
-export const listenerUsers: Record<string, ListenerUser> = {
-  u_6973879cc7632: {
-    id: "u_6973879cc7632",
-    fullname: "Ban Tham mưu",
-    rank: "Trực ban",
-    position: "Tiếp nhận nội dung huấn luyện, sẵn sàng chiến đấu",
-    phone: "0878129694",
-    order: 1,
-  },
-  u_697387ede9da3: {
-    id: "u_697387ede9da3",
-    fullname: "Cơ quan Chính trị",
-    rank: "Trực ban",
-    position: "Tiếp nhận tâm tư, quan hệ đồng chí, công tác chính trị",
-    phone: "0366320086",
-    order: 2,
-  },
-  u_69739a09575fb: {
-    id: "u_69739a09575fb",
-    fullname: "Ban Hậu cần - Kỹ thuật",
-    rank: "Trực ban",
-    position: "Tiếp nhận nội dung bảo đảm đời sống, trang bị, kỹ thuật",
-    phone: "0878129694",
-    order: 3,
-  },
-};
-
 export const categories: Category[] = [
+  {
+    id: "696edfd3b65ce",
+    name: "Công tác quân sự",
+  },
   {
     id: "696edf354fe11",
     name: "Công tác Đảng, công tác chính trị",
-    assigned: ["u_697387ede9da3"],
-  },
-  {
-    id: "696edfd3b65ce",
-    name: "Huấn luyện, sẵn sàng chiến đấu",
-    assigned: ["u_6973879cc7632"],
   },
   {
     id: "696ee045dbd3b",
-    name: "Hậu cần, kỹ thuật, đời sống",
-    assigned: ["u_69739a09575fb"],
-  },
-  {
-    id: "696ee0b512a21",
-    name: "Kỷ luật, an toàn, quan hệ đồng chí",
-    assigned: ["u_697387ede9da3", "u_6973879cc7632"],
+    name: "Công tác hậu cần, kĩ thuật",
   },
 ];
 
 export const quickMessages: QuickTemplate[] = [
   {
-    id: "discipline-risk",
-    label: "Vi phạm kỷ luật, mất an toàn",
-    categoryId: "696ee0b512a21",
-    body: "- Vấn đề/sự việc chính:\n- Thời gian xảy ra:\n- Địa điểm:\n- Người/bộ phận liên quan nếu biết:\n- Mức độ ảnh hưởng hoặc nguy cơ:\n- Đề nghị chỉ huy xem xét:",
-  },
-  {
-    id: "training-duty",
-    label: "Huấn luyện, sẵn sàng chiến đấu",
-    categoryId: "696edfd3b65ce",
-    body: "- Nội dung góp ý về huấn luyện/nhiệm vụ:\n- Thời gian hoặc buổi huấn luyện liên quan:\n- Khó khăn, vướng mắc cụ thể:\n- Ảnh hưởng đến đơn vị/cá nhân:\n- Đề xuất khắc phục:",
-  },
-  {
-    id: "political-work",
-    label: "Tâm tư, quan hệ đồng chí",
+    id: "today-happy",
+    label: "Hôm nay tôi vui",
     categoryId: "696edf354fe11",
-    body: "- Nội dung cần trao đổi:\n- Thời gian, hoàn cảnh phát sinh:\n- Cá nhân/tập thể liên quan nếu có:\n- Mong muốn được hỗ trợ:\n- Đề xuất hướng giải quyết:",
+    body: "Hôm nay tôi vui",
   },
   {
-    id: "logistics-life",
-    label: "Hậu cần, đời sống, kỹ thuật",
-    categoryId: "696ee045dbd3b",
-    body: "- Nội dung kiến nghị về hậu cần/đời sống/kỹ thuật:\n- Vị trí, bộ phận hoặc trang bị liên quan:\n- Tình trạng hiện tại:\n- Ảnh hưởng đến sinh hoạt/nhiệm vụ:\n- Đề xuất xử lý:",
+    id: "today-sad",
+    label: "Hôm nay tôi buồn",
+    categoryId: "696edf354fe11",
+    body: "Hôm nay tôi buồn",
   },
   {
-    id: "improvement",
-    label: "Đề xuất cải tiến công việc",
-    categoryId: "696edfd3b65ce",
-    body: "- Nội dung đề xuất:\n- Việc hiện nay đang vướng ở điểm nào:\n- Cách làm đề nghị áp dụng:\n- Lợi ích dự kiến cho đơn vị:\n- Điều kiện cần để thực hiện:",
+    id: "today-tired",
+    label: "Hôm nay tôi mệt",
+    categoryId: "696edf354fe11",
+    body: "Hôm nay tôi mệt",
+  },
+  {
+    id: "today-worried",
+    label: "Hôm nay tôi lo lắng",
+    categoryId: "696edf354fe11",
+    body: "Hôm nay tôi lo lắng",
   },
 ];
 

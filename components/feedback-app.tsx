@@ -2,9 +2,11 @@
 
 import {
   AlertTriangle,
+  BatteryLow,
   ClipboardList,
+  Cloudy,
   Download,
-  FileText,
+  Frown,
   Headphones,
   ListChecks,
   LoaderCircle,
@@ -18,6 +20,7 @@ import {
   Share,
   ShieldCheck,
   ShieldUser,
+  Smile,
   SquarePlus,
   User,
   Users,
@@ -26,19 +29,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import { FixedFooter, MarqueeBar } from "@/components/site-frame";
 import {
   normalizeTicketCode,
   type ManagedListener,
   type StoredTicket,
 } from "@/lib/data-models";
-import {
-  categories,
-  listenerUsers,
-  logoPath,
-  quickMessages,
-  unitName,
-} from "@/lib/site-data";
+import { categories, logoPath, quickMessages, unitName } from "@/lib/site-data";
 
 type Tab = "submit" | "search";
 type FeedbackAppProps = {
@@ -51,43 +47,70 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 const workflowSteps = [
-  { label: "Chọn nhóm", icon: ListChecks },
+  { label: "Chọn ngành", icon: ListChecks },
   { label: "Gửi góp ý", icon: MessageSquareText },
   { label: "Nhận mã", icon: ShieldCheck },
 ];
-const minimumContentLength = 30;
+const quickMessageIcons = {
+  "today-happy": Smile,
+  "today-sad": Frown,
+  "today-tired": BatteryLow,
+  "today-worried": Cloudy,
+};
 
-const fallbackListeners = Object.values(listenerUsers).map((listener) => ({
-  ...listener,
-  assigned_categories: categories
-    .filter((category) => category.assigned.includes(listener.id))
-    .map((category) => category.id),
-  is_enabled: true,
-  created_at: "",
-  updated_at: "",
-})) satisfies ManagedListener[];
-
-function getMeaningfulContent(value: string) {
+function normalizeMatchText(value: string) {
   return value
-    .split(/\r?\n/)
-    .map((line) => {
-      const cleaned = line.replace(/^[-•]\s*/, "").trim();
-      if (!cleaned) {
-        return "";
-      }
-
-      const fieldMatch = cleaned.match(/^[^:]{2,80}:\s*(.*)$/);
-      return fieldMatch ? fieldMatch[1].trim() : cleaned;
-    })
-    .join(" ")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-export function FeedbackApp({
-  initialListeners = fallbackListeners,
-}: FeedbackAppProps) {
+function categoryMatchKeys(category: (typeof categories)[number]) {
+  const normalizedName = normalizeMatchText(category.name);
+  const keys = new Set([normalizeMatchText(category.id), normalizedName]);
+
+  if (normalizedName.includes("quan su")) {
+    keys.add("cong tac quan su");
+    keys.add("quan su");
+  }
+  if (normalizedName.includes("dang")) {
+    keys.add("cong tac dang cong tac chinh tri");
+    keys.add("cong tac dang ct chinh tri");
+    keys.add("ct dang ct chinh tri");
+  }
+  if (normalizedName.includes("hau can")) {
+    keys.add("cong tac hau can ki thuat");
+    keys.add("cong tac hau can ky thuat");
+    keys.add("hau can ky thuat");
+    keys.add("hau can ki thuat");
+  }
+
+  return keys;
+}
+
+function listenerMatchesCategory(
+  listener: ManagedListener,
+  category: (typeof categories)[number],
+) {
+  if (listener.assigned_categories.length === 0) {
+    return false;
+  }
+
+  const keys = categoryMatchKeys(category);
+  return listener.assigned_categories.some((assignedCategory) =>
+    keys.has(normalizeMatchText(assignedCategory)),
+  );
+}
+
+export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
   const [tab, setTab] = useState<Tab>("submit");
+  const [listeners, setListeners] =
+    useState<ManagedListener[]>(initialListeners);
   const [categoryId, setCategoryId] = useState("");
   const [message, setMessage] = useState("");
   const [name, setName] = useState("");
@@ -113,19 +136,38 @@ export function FeedbackApp({
       return [];
     }
 
-    return initialListeners
-      .filter(
-        (listener) =>
-          listener.is_enabled &&
-          listener.assigned_categories.includes(selected.id),
-      )
+    const enabledListeners = listeners
+      .filter((listener) => listener.is_enabled)
       .sort((a, b) => a.order - b.order);
-  }, [categoryId, initialListeners]);
-  const meaningfulContent = useMemo(
-    () => getMeaningfulContent(message),
-    [message],
-  );
-  const isContentClear = meaningfulContent.length >= minimumContentLength;
+    const matchedListeners = enabledListeners.filter((listener) =>
+      listenerMatchesCategory(listener, selected),
+    );
+
+    return matchedListeners;
+  }, [categoryId, listeners]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetch("/api/listeners", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) {
+          return null;
+        }
+
+        return (await response.json()) as { listeners?: ManagedListener[] };
+      })
+      .then((data) => {
+        if (isMounted && data?.listeners) {
+          setListeners(data.listeners);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const readErrorMessage = async (response: Response) => {
     try {
@@ -171,18 +213,12 @@ export function FeedbackApp({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!categoryId || !message.trim()) {
-      setErrorModal("Vui lòng chọn nhóm nội dung và nhập nội dung góp ý.");
+      setErrorModal("Vui lòng chọn ngành nghề phụ trách và nhập nội dung.");
       return;
     }
     if (!isAnonymous && (!name.trim() || !unit.trim())) {
       setErrorModal(
         "Vui lòng nhập đầy đủ họ tên và đơn vị, hoặc chọn gửi ẩn danh.",
-      );
-      return;
-    }
-    if (!isContentClear) {
-      setErrorModal(
-        "Nội dung cần cụ thể hơn. Vui lòng nêu rõ sự việc, thời gian, địa điểm, người/bộ phận liên quan nếu có và đề xuất xử lý.",
       );
       return;
     }
@@ -290,11 +326,9 @@ export function FeedbackApp({
   };
 
   return (
-    <main className="site-canvas bg-background text-foreground flex min-h-dvh flex-col">
-      <MarqueeBar />
-
+    <main className="site-canvas text-foreground flex flex-col">
       <div className="flex-1">
-        <section className="mx-auto max-w-5xl px-3 py-15 sm:px-5">
+        <section className="mx-auto max-w-5xl px-3 py-10 sm:px-5">
           <div className="command-shell reveal-up overflow-hidden">
             <div className="command-hero p-4 text-white sm:p-6">
               <div className="mb-5 flex items-center justify-between gap-3">
@@ -406,69 +440,32 @@ export function FeedbackApp({
               {tab === "submit" && (
                 <div className="space-y-4">
                   <div className="shine-card reveal-up reveal-delay-1 bg-accent/45 border-(--military-medal)/45 shadow-none">
-                    <div className="p-4 pb-2">
+                    <div className="p-4 pb-2 text-center">
                       <h3 className="text-accent-foreground text-xs font-semibold tracking-[0.14em] uppercase">
-                        Mẫu khai báo nhanh
+                        Khai báo nhanh nội dung
                       </h3>
-                      <p className="text-accent-foreground/80 text-xs leading-5">
-                        Nội dung là bắt buộc. Mẫu chỉ giúp trình bày rõ hơn,
-                        không gửi thay đồng chí.
-                      </p>
                     </div>
                     <div className="grid grid-cols-1 gap-2 p-4 pt-2 sm:grid-cols-2">
-                      {quickMessages.map((template) => (
-                        <button
-                          key={template.id}
-                          type="button"
-                          onClick={() => applyTemplate(template)}
-                          className="btn btn-outline text-accent-foreground focus-lift hover:bg-accent/55 border-(--military-medal)/45 bg-white px-3 text-xs font-bold"
-                        >
-                          <FileText className="size-4" />
-                          {template.label}
-                        </button>
-                      ))}
+                      {quickMessages.map((template) => {
+                        const Icon =
+                          quickMessageIcons[
+                            template.id as keyof typeof quickMessageIcons
+                          ] ?? MessageSquareText;
+
+                        return (
+                          <button
+                            key={template.id}
+                            type="button"
+                            onClick={() => applyTemplate(template)}
+                            className="btn btn-outline text-accent-foreground focus-lift hover:bg-accent/55 border-(--military-medal)/45 bg-white px-3 text-xs font-bold"
+                          >
+                            <Icon className="size-4" />
+                            {template.label}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
-
-                  {assignedListeners.length > 0 && (
-                    <div className="shine-card reveal-up reveal-delay-2 border-primary/10 bg-primary/5 shadow-none">
-                      <div className="p-4 pb-2">
-                        <h3 className="text-primary flex items-center gap-2 text-xs font-semibold tracking-[0.12em] uppercase">
-                          <Headphones className="size-4" />
-                          Bộ phận tiếp nhận
-                        </h3>
-                      </div>
-                      <div className="grid gap-2 p-4 pt-2">
-                        {assignedListeners.map((user) => (
-                          <div
-                            key={user.id}
-                            className="focus-lift rounded-box flex items-center justify-between gap-3 border border-white bg-white p-3 shadow-sm"
-                          >
-                            <div className="flex min-w-0 items-center gap-2">
-                              <div className="bg-primary flex size-10 shrink-0 items-center justify-center rounded-full text-white">
-                                <ShieldUser className="size-4" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-foreground truncate text-sm font-semibold">
-                                  {user.rank} {user.fullname}
-                                </p>
-                                <p className="text-muted-foreground text-xs leading-4 font-medium">
-                                  {user.position}
-                                </p>
-                              </div>
-                            </div>
-                            <a
-                              href={`tel:${user.phone}`}
-                              className="btn btn-outline btn-sm focus-lift shrink-0 border-emerald-100 bg-emerald-50 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                            >
-                              <Phone className="size-3" />
-                              Gọi
-                            </a>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
 
                   <form
                     className="shine-card reveal-up reveal-delay-2 flex flex-col gap-4"
@@ -483,7 +480,7 @@ export function FeedbackApp({
                         className="select select-bordered bg-base-100 h-10 w-full text-sm font-medium"
                       >
                         <option value="" disabled>
-                          Chọn nhóm nội dung cần góp ý
+                          Chọn ngành nghề phụ trách
                         </option>
                         {categories.map((category) => (
                           <option key={category.id} value={category.id}>
@@ -492,6 +489,48 @@ export function FeedbackApp({
                         ))}
                       </select>
                     </div>
+
+                    {assignedListeners.length > 0 && (
+                      <div className="px-4">
+                        <div className="rounded-box border-primary/10 bg-primary/5 border">
+                          <div className="p-4 pb-2">
+                            <h3 className="text-primary flex items-center gap-2 text-xs font-semibold tracking-[0.12em] uppercase">
+                              <Headphones className="size-4" />
+                              Người phụ trách lắng nghe
+                            </h3>
+                          </div>
+                          <div className="grid gap-2 p-4 pt-2">
+                            {assignedListeners.map((user) => (
+                              <div
+                                key={user.id}
+                                className="focus-lift rounded-box flex items-center justify-between gap-3 border border-white bg-white p-3 shadow-sm"
+                              >
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <div className="bg-primary flex size-10 shrink-0 items-center justify-center rounded-full text-white">
+                                    <ShieldUser className="size-4" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-foreground truncate text-sm font-semibold">
+                                      {user.rank} {user.fullname}
+                                    </p>
+                                    <p className="text-muted-foreground text-xs leading-4 font-medium">
+                                      {user.position}
+                                    </p>
+                                  </div>
+                                </div>
+                                <a
+                                  href={`tel:${user.phone}`}
+                                  className="btn btn-outline btn-sm focus-lift shrink-0 border-emerald-100 bg-emerald-50 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                                >
+                                  <Phone className="size-3" />
+                                  Gọi
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="px-4">
                       <label className="border-border rounded-field text-foreground/85 flex cursor-pointer items-center gap-3 border bg-white p-3 text-sm font-semibold">
@@ -544,26 +583,11 @@ export function FeedbackApp({
                         ref={textareaRef}
                         value={message}
                         onChange={(event) => setMessage(event.target.value)}
-                        rows={8}
+                        rows={7}
                         required
-                        placeholder="Nêu rõ: sự việc/vấn đề gì, xảy ra khi nào, ở đâu, ai/bộ phận nào liên quan nếu có, ảnh hưởng ra sao và đề xuất xử lý..."
-                        className="textarea textarea-bordered border-border bg-muted text-foreground placeholder:text-muted-foreground/70 focus:border-primary min-h-40 w-full resize-none pl-12 text-sm leading-6 transition focus:bg-white"
+                        placeholder="Nội dung chi tiết..."
+                        className="textarea textarea-bordered border-border bg-muted text-foreground placeholder:text-muted-foreground/70 focus:border-primary min-h-36 w-full resize-y pl-12 text-sm leading-6 transition focus:bg-white"
                       />
-                    </div>
-                    <div className="px-4">
-                      <div className="alert border-border/60 bg-muted flex w-full flex-wrap items-center justify-between gap-1 text-xs">
-                        <span className="text-muted-foreground font-semibold">
-                          Cần đủ ý để người xử lý nắm đúng sự việc.
-                        </span>
-                        <span
-                          className={`font-semibold ${
-                            isContentClear ? "text-emerald-700" : "text-red-700"
-                          }`}
-                        >
-                          {meaningfulContent.length}/{minimumContentLength} ký
-                          tự nội dung
-                        </span>
-                      </div>
                     </div>
                     <div className="px-4 pb-4">
                       <button
@@ -658,7 +682,7 @@ export function FeedbackApp({
                         <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
                           <div className="border-border/60 bg-muted rounded-box border p-3">
                             <p className="text-muted-foreground/70 mb-1 font-semibold tracking-[0.12em] uppercase">
-                              Nhóm nội dung
+                              Ngành phụ trách
                             </p>
                             <p className="text-foreground/85 font-bold">
                               {searchResult.category || "Chưa phân loại"}
@@ -712,8 +736,6 @@ export function FeedbackApp({
           </div>
         </section>
       </div>
-
-      <FixedFooter />
 
       {showIosModal ? (
         <div className="modal modal-open" role="dialog" aria-modal="true">

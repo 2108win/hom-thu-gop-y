@@ -12,8 +12,9 @@ export type AdminSession = {
 
 function getSessionSecret() {
   return (
-    process.env.ADMIN_SESSION_SECRET ||
-    process.env.GOOGLE_SHEETS_SPREADSHEET_ID ||
+    process.env.SUPABASE_SECRET_KEY?.trim() ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
+    process.env.SUPABASE_SERVICE_ROLE?.trim() ||
     "hom-thu-dev-secret"
   );
 }

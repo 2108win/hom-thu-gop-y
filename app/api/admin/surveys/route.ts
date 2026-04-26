@@ -11,7 +11,7 @@ import {
 import {
   appendManagedSurvey,
   getManagedSurveys,
-} from "@/lib/google-sheets-store";
+} from "@/lib/data-store";
 import { createEntityId } from "@/lib/server-codes";
 
 export const runtime = "nodejs";

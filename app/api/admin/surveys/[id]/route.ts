@@ -11,7 +11,7 @@ import {
 import {
   patchManagedSurvey,
   removeManagedSurvey,
-} from "@/lib/google-sheets-store";
+} from "@/lib/data-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

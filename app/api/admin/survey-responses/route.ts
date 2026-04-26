@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { adminCookieName, isValidAdminSession } from "@/lib/admin-auth";
 import { jsonError } from "@/lib/api-utils";
-import { getSurveyResponses } from "@/lib/google-sheets-store";
+import { getSurveyResponses } from "@/lib/data-store";
 
 export const runtime = "nodejs";
 

@@ -7,7 +7,7 @@ import { formatDateTime, type ManagedListener } from "@/lib/data-models";
 import {
   patchManagedListener,
   removeManagedListener,
-} from "@/lib/google-sheets-store";
+} from "@/lib/data-store";
 import { categories } from "@/lib/site-data";
 
 export const runtime = "nodejs";
@@ -53,7 +53,7 @@ export async function PATCH(
 
     if (typeof body.fullname === "string") {
       if (!body.fullname.trim()) {
-        return badRequest("Vui lòng nhập tên bộ phận/cán bộ tiếp nhận.");
+        return badRequest("Vui lòng nhập họ tên người phụ trách.");
       }
       patch.fullname = body.fullname.trim();
     }
@@ -65,7 +65,7 @@ export async function PATCH(
     }
     if (typeof body.position === "string") {
       if (!body.position.trim()) {
-        return badRequest("Vui lòng nhập nhiệm vụ tiếp nhận.");
+        return badRequest("Vui lòng nhập chức vụ/nhiệm vụ phụ trách.");
       }
       patch.position = body.position.trim();
     }
@@ -92,14 +92,14 @@ export async function PATCH(
     const listener = await patchManagedListener(id, patch);
     if (!listener) {
       return NextResponse.json(
-        { message: "Không tìm thấy bộ phận tiếp nhận." },
+        { message: "Không tìm thấy người phụ trách." },
         { status: 404 },
       );
     }
 
     return NextResponse.json({ listener });
   } catch (error) {
-    return jsonError(error, "Không thể cập nhật bộ phận tiếp nhận.");
+    return jsonError(error, "Không thể cập nhật người phụ trách.");
   }
 }
 
@@ -117,13 +117,13 @@ export async function DELETE(
 
     if (!deleted) {
       return NextResponse.json(
-        { message: "Không tìm thấy bộ phận tiếp nhận." },
+        { message: "Không tìm thấy người phụ trách." },
         { status: 404 },
       );
     }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    return jsonError(error, "Không thể xóa bộ phận tiếp nhận.");
+    return jsonError(error, "Không thể xóa người phụ trách.");
   }
 }

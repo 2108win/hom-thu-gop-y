@@ -13,7 +13,7 @@ type LoginFormProps = {
 
 export function LoginForm({ loading, loginError, onSubmit }: LoginFormProps) {
   return (
-    <main className="site-canvas bg-background flex min-h-dvh items-center justify-center p-4">
+    <main className="site-canvas flex items-center justify-center p-4">
       <form
         onSubmit={onSubmit}
         className="shine-card reveal-up border-border w-full max-w-sm border bg-white p-7 text-center shadow-xl"

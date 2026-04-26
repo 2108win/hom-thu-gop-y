@@ -57,7 +57,7 @@ export function ListenersTab({
         <div className="mb-3 flex items-center gap-2">
           <Headphones className="text-primary size-5" />
           <h2 className="text-foreground text-base font-semibold uppercase">
-            Thêm bộ phận tiếp nhận
+            Thêm người phụ trách
           </h2>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -70,7 +70,7 @@ export function ListenersTab({
               }))
             }
             required
-            placeholder="Tên hiển thị, ví dụ: Ban Tham mưu"
+            placeholder="Họ tên người phụ trách"
             className="input input-bordered border-border bg-muted focus:border-primary h-10 w-full text-sm"
           />
           <input
@@ -119,7 +119,7 @@ export function ListenersTab({
             }
             required
             rows={3}
-            placeholder="Nhiệm vụ tiếp nhận"
+            placeholder="Chức vụ/nhiệm vụ phụ trách"
             className="textarea textarea-bordered border-border bg-muted focus:border-primary min-h-24 w-full text-sm sm:col-span-2"
           />
         </div>
@@ -172,7 +172,7 @@ export function ListenersTab({
           ) : (
             <Plus className="size-4" />
           )}
-          {isActionPending("listener:create") ? "Đang tạo" : "Tạo bộ phận"}
+          {isActionPending("listener:create") ? "Đang tạo" : "Tạo người phụ trách"}
         </button>
       </form>
 
@@ -189,7 +189,7 @@ export function ListenersTab({
 
       {listeners.length === 0 ? (
         <p className="shine-card text-muted-foreground/70 p-6 text-center text-sm font-bold">
-          Chưa có bộ phận tiếp nhận nào.
+          Chưa có người phụ trách nào.
         </p>
       ) : (
         listeners.map((listener) => (

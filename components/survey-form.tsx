@@ -4,12 +4,7 @@ import { CheckCircle, LoaderCircle, Send } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 
-import {
-  BackButton,
-  FixedFooter,
-  MarqueeBar,
-  UnitHeader,
-} from "@/components/site-frame";
+import { BackButton, UnitHeader } from "@/components/site-frame";
 import type { StoredSurveyResponse, SurveyAnswer } from "@/lib/data-models";
 import type { Survey } from "@/lib/site-data";
 
@@ -24,8 +19,7 @@ export function SurveyForm({ survey }: { survey?: Survey }) {
 
   if (!survey) {
     return (
-      <main className="site-canvas flex min-h-dvh flex-col">
-        <MarqueeBar />
+      <main className="site-canvas flex flex-col">
         <BackButton />
         <div
           className="mx-auto flex-1 pb-4"
@@ -48,7 +42,6 @@ export function SurveyForm({ survey }: { survey?: Survey }) {
             </div>
           </div>
         </div>
-        <FixedFooter />
       </main>
     );
   }
@@ -119,8 +112,7 @@ export function SurveyForm({ survey }: { survey?: Survey }) {
   };
 
   return (
-    <main className="site-canvas flex min-h-dvh flex-col">
-      <MarqueeBar />
+    <main className="site-canvas flex flex-col">
       <BackButton />
       <div
         className="mx-auto flex-1 pb-4"
@@ -209,8 +201,6 @@ export function SurveyForm({ survey }: { survey?: Survey }) {
           </button>
         </form>
       </div>
-
-      <FixedFooter />
 
       {success && (
         <div className="modal modal-open" role="dialog" aria-modal="true">

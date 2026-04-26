@@ -1,4 +1,4 @@
-const CACHE_NAME = "hom-thu-v2";
+const CACHE_NAME = "hom-thu-v4";
 const urlsToCache = ["/", "/khao-sat", "/logo-ludoan234.png"];
 
 self.addEventListener("install", (event) => {

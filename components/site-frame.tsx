@@ -13,10 +13,17 @@ import {
 
 export function MarqueeBar() {
   return (
-    <div className="command-hero fixed! top-0 z-50 w-full border-b border-(--military-medal)/45 text-white shadow-lg">
-      <div className="mx-auto flex max-w-5xl items-center justify-center px-4 py-2 text-center text-xs leading-4 font-semibold tracking-widest text-balance text-(--military-medal-soft) uppercase sm:text-base sm:tracking-[0.14em]">
-        {slogan}
+    <div className="marquee-container sticky! top-0 z-50 w-full shadow-md">
+      <div className="marquee-content" aria-hidden="true">
+        {[0, 1, 2].map((item) => (
+          <span key={item} className="marquee-item">
+            <span className="marquee-star">★</span>
+            <span>{slogan}</span>
+            <span className="marquee-star">★</span>
+          </span>
+        ))}
       </div>
+      <span className="sr-only">{slogan}</span>
     </div>
   );
 }
@@ -72,7 +79,7 @@ export function BackButton() {
 
 export function FixedFooter() {
   return (
-    <div className="command-hero fixed! bottom-0 z-40 mt-auto w-full border-t border-(--military-medal)/25 px-4 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] text-center text-[10px] font-semibold tracking-[0.16em] text-(--military-cream) uppercase shadow-[0_-10px_28px_-22px_rgba(10,31,21,0.65)]">
+    <div className="command-hero sticky! bottom-0 z-40 mt-auto w-full border-t border-(--military-medal)/25 px-4 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] text-center text-[10px] font-semibold tracking-[0.16em] text-(--military-cream) uppercase shadow-[0_-10px_28px_-22px_rgba(10,31,21,0.65)]">
       {footerName}
     </div>
   );

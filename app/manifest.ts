@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Hòm thư góp ý và khảo sát trực tuyến của LỮ ĐOÀN PPK234",
     start_url: "/",
     display: "standalone",
-    background_color: "#f5efe1",
-    theme_color: "#0f2f21",
+    background_color: "#fefce8",
+    theme_color: "#b91c1c",
     icons: [
       {
         src: "/logo-ludoan234.png",

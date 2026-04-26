@@ -4,9 +4,10 @@ import { NextResponse } from "next/server";
 import { adminCookieName, createAdminSessionValue } from "@/lib/admin-auth";
 import { jsonError } from "@/lib/api-utils";
 import {
-  adminAccountSheetName,
+  adminAccountStoreName,
   authenticateAdminAccount,
-} from "@/lib/google-sheets-store";
+  storageProvider,
+} from "@/lib/data-store";
 
 export const runtime = "nodejs";
 
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
     if (auth.status === "empty") {
       return NextResponse.json(
         {
-          message: `Chưa có tài khoản quản trị đang bật trong tab "${adminAccountSheetName}" của Google Sheets.`,
+          message: `Chưa có tài khoản quản trị đang bật trong "${adminAccountStoreName}" của ${storageProvider}.`,
         },
         { status: 401 },
       );

@@ -3,9 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { FixedFooter, MarqueeBar } from "@/components/site-frame";
 import { isSurveyOpen } from "@/lib/data-models";
-import { findManagedSurvey } from "@/lib/google-sheets-store";
+import { findManagedSurvey } from "@/lib/data-store";
 import { appName, logoPath, unitName } from "@/lib/site-data";
 
 type SurveyPageProps = {
@@ -25,9 +24,7 @@ export default async function SurveyPage({ params }: SurveyPageProps) {
   }
 
   return (
-    <main className="site-canvas bg-base-100 text-base-content flex min-h-dvh flex-col">
-      <MarqueeBar />
-
+    <main className="site-canvas bg-base-100 text-base-content flex flex-col">
       <div className="flex-1">
         <header className="command-hero border-b-4 border-(--military-medal) text-white shadow-sm">
           <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-5">
@@ -70,7 +67,7 @@ export default async function SurveyPage({ params }: SurveyPageProps) {
         <section className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
           <div className="card shine-card reveal-up border-base-300 bg-base-100 border text-center shadow-sm">
             <div className="card-body p-6">
-              <div className="bg-background text-primary mx-auto mb-4 flex size-14 items-center justify-center">
+              <div className="text-primary mx-auto mb-4 flex size-14 items-center justify-center">
                 <CalendarClock className="size-7" />
               </div>
               <h2 className="text-primary mb-2 text-xl font-semibold uppercase">
@@ -90,8 +87,6 @@ export default async function SurveyPage({ params }: SurveyPageProps) {
           </div>
         </section>
       </div>
-
-      <FixedFooter />
     </main>
   );
 }

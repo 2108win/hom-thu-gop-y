@@ -5,7 +5,7 @@ import { createSurveyResponse, type SurveyAnswer } from "@/lib/data-models";
 import {
   appendSurveyResponse,
   createUniqueSurveyResponseCode,
-} from "@/lib/google-sheets-store";
+} from "@/lib/data-store";
 import { surveys } from "@/lib/site-data";
 
 export const runtime = "nodejs";

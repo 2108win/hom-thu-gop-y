@@ -8,7 +8,7 @@ import {
 } from "@/lib/admin-auth";
 import { jsonError } from "@/lib/api-utils";
 import type { StoredTicket } from "@/lib/data-models";
-import { patchTicket, removeTicket } from "@/lib/google-sheets-store";
+import { patchTicket, removeTicket } from "@/lib/data-store";
 
 export const runtime = "nodejs";
 

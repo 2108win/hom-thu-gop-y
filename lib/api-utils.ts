@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { isSheetsConfigError } from "@/lib/google-sheets-store";
+import { isStoreConfigError } from "@/lib/data-store";
 
 export function jsonError(error: unknown, fallback = "Có lỗi xảy ra.") {
-  if (isSheetsConfigError(error)) {
+  if (isStoreConfigError(error)) {
     return NextResponse.json(
       { message: error instanceof Error ? error.message : fallback },
       { status: 503 },

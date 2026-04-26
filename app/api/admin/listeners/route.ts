@@ -7,7 +7,7 @@ import { createManagedListener } from "@/lib/data-models";
 import {
   appendManagedListener,
   getManagedListeners,
-} from "@/lib/google-sheets-store";
+} from "@/lib/data-store";
 import { createEntityId } from "@/lib/server-codes";
 import { categories } from "@/lib/site-data";
 
@@ -42,7 +42,7 @@ export async function GET() {
     const listeners = await getManagedListeners();
     return NextResponse.json({ listeners });
   } catch (error) {
-    return jsonError(error, "Không thể tải bộ phận tiếp nhận.");
+    return jsonError(error, "Không thể tải người phụ trách.");
   }
 }
 
@@ -67,13 +67,13 @@ export async function POST(request: Request) {
     const phone = String(body.phone ?? "").trim();
 
     if (!fullname) {
-      return badRequest("Vui lòng nhập tên bộ phận/cán bộ tiếp nhận.");
+      return badRequest("Vui lòng nhập họ tên người phụ trách.");
     }
     if (!rank) {
       return badRequest("Vui lòng nhập chức danh/cấp bậc hiển thị.");
     }
     if (!position) {
-      return badRequest("Vui lòng nhập nhiệm vụ tiếp nhận.");
+      return badRequest("Vui lòng nhập chức vụ/nhiệm vụ phụ trách.");
     }
     if (!phone) {
       return badRequest("Vui lòng nhập số điện thoại.");
@@ -93,6 +93,6 @@ export async function POST(request: Request) {
     await appendManagedListener(listener);
     return NextResponse.json({ listener });
   } catch (error) {
-    return jsonError(error, "Không thể tạo bộ phận tiếp nhận.");
+    return jsonError(error, "Không thể tạo người phụ trách.");
   }
 }

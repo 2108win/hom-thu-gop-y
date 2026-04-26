@@ -1,6 +1,6 @@
 # Hòm thư góp ý - LỮ ĐOÀN PPK234
 
-## Getting Started
+## Development
 
 Run the development server:
 
@@ -8,62 +8,70 @@ Run the development server:
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Google Sheets
+## Supabase Database
 
-The app stores feedback tickets and survey responses in Google Sheets through
-server-side API routes. Do not call Google Sheets directly from the browser.
+The app stores all data in Supabase/Postgres through server-side API routes.
+No spreadsheet backend is used.
 
-Required environment variables:
+### 1. Create Tables
 
-```env
-GOOGLE_SHEETS_SPREADSHEET_ID=
-GOOGLE_SERVICE_ACCOUNT_EMAIL=
-GOOGLE_PRIVATE_KEY=
-
-ADMIN_BOOTSTRAP_USER=
-ADMIN_BOOTSTRAP_PASSWORD=
-ADMIN_BOOTSTRAP_DISPLAY_NAME=
-ADMIN_SESSION_SECRET=
-
-GOOGLE_SHEETS_FEEDBACK_SHEET=GopY
-GOOGLE_SHEETS_SURVEY_SHEET=KhaoSat
-GOOGLE_SHEETS_SURVEY_LIST_SHEET=DanhSachKhaoSat
-GOOGLE_SHEETS_LISTENER_SHEET=BoPhanTiepNhan
-GOOGLE_SHEETS_ADMIN_SHEET=TaiKhoanAdmin
-```
-
-You can also use `GOOGLE_SERVICE_ACCOUNT_JSON` instead of
-`GOOGLE_SERVICE_ACCOUNT_EMAIL` and `GOOGLE_PRIVATE_KEY`.
-
-Setup:
-
-1. Create a Google Cloud service account and key.
-2. Enable Google Sheets API for the Google Cloud project.
-3. Create a Google Sheet.
-4. Share the Sheet with the service account email as Editor.
-5. Put the environment variables in `.env.local`.
-6. Restart `npm run dev`.
-
-The app will create or initialize these tabs automatically:
-
-- `GopY`: feedback tickets
-- `KhaoSat`: legacy/internal survey responses
-- `DanhSachKhaoSat`: admin-managed survey links, dates, and QR routes
-- `BoPhanTiepNhan`: admin-managed receiving departments/listeners
-- `TaiKhoanAdmin`: admin login accounts
-
-Admin account rows use these columns, one account per row:
+Create a free Supabase project, open SQL Editor, and run:
 
 ```text
-username | password | display_name | is_enabled | updated_at
+supabase/schema.sql
 ```
 
-Set `is_enabled` to `TRUE` for accounts allowed to log in. Passwords are read
-directly from the sheet, so limit access to the Google Sheet to trusted editors.
-When the `/quan-tri` page is opened, the app ensures this tab exists. If the tab
-is empty and `ADMIN_BOOTSTRAP_USER`/`ADMIN_BOOTSTRAP_PASSWORD` are set, one
-initial enabled account is added automatically. Existing legacy
-`ADMIN_USER`/`ADMIN_PASSWORD` variables are also accepted for this one-time
-bootstrap seed.
+### 2. Environment Variables
+
+Add these values to `.env.local`:
+
+```env
+SUPABASE_URL=
+SUPABASE_SECRET_KEY=
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` is also accepted for legacy projects, but
+`SUPABASE_SECRET_KEY` is preferred.
+
+### 3. Where To Get Supabase Values
+
+In the Supabase dashboard, open your project and use:
+
+- `SUPABASE_URL`: Project Settings -> Data API -> Project URL.
+- `SUPABASE_SECRET_KEY`: Project Settings -> API Keys -> create/copy a Secret key.
+- Legacy option: Project Settings -> API Keys -> Legacy API Keys -> `service_role`.
+
+If you paste the Data API REST URL that ends with `/rest/v1`, the app will
+normalize it automatically. The recommended value is still the Project URL.
+
+Do not expose `SUPABASE_SECRET_KEY` or `SUPABASE_SERVICE_ROLE_KEY` in browser
+code or any `NEXT_PUBLIC_` environment variable.
+
+### 4. Admin Accounts
+
+Admin login uses the `public.admin_accounts` table created by
+`supabase/schema.sql`. If you do not see that table in Supabase Table Editor,
+open SQL Editor and run `supabase/schema.sql` first.
+
+Create and manage admin accounts directly in Supabase Table Editor, or insert
+one account in SQL Editor:
+
+```sql
+insert into public.admin_accounts
+  (username, password, display_name, is_enabled, updated_at)
+values
+  ('admin', 'change-this-password', 'Quản trị viên', true, to_char(now(), 'DD/MM/YYYY HH24:MI'));
+```
+
+Passwords are read from the `password` column for this internal admin screen, so
+limit Supabase Dashboard access to trusted operators.
+
+Restart the app after editing `.env.local`.
+
+### 5. Managed Listeners
+
+The "Người phụ trách lắng nghe" section is loaded only from
+`public.managed_listeners`. There are no bundled default listener records.
+Add, edit, disable, or delete listeners from the admin "Tiếp nhận" tab.

@@ -1,4 +1,5 @@
 import { ServiceWorkerRegistrar } from "@/components/service-worker-registrar";
+import { FixedFooter, MarqueeBar } from "@/components/site-frame";
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import "./globals.css";
@@ -26,9 +27,11 @@ export default function RootLayout({
       data-theme="homthu"
       className={`${roboto.variable} h-full antialiased`}
     >
-      <body className="min-h-dvh">
+      <body className="flex min-h-dvh flex-col">
+        <MarqueeBar />
         {children}
         <ServiceWorkerRegistrar />
+        <FixedFooter />
       </body>
     </html>
   );

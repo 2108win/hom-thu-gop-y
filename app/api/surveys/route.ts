@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { jsonError } from "@/lib/api-utils";
-import { getOpenManagedSurveys } from "@/lib/google-sheets-store";
+import { getOpenManagedSurveys } from "@/lib/data-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

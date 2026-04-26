@@ -390,7 +390,7 @@ export function AdminLogin() {
         setAdminError(
           error instanceof Error
             ? error.message
-            : "Không thể tạo bộ phận tiếp nhận.",
+            : "Không thể tạo người phụ trách.",
         );
       }
     });
@@ -438,7 +438,7 @@ export function AdminLogin() {
         setAdminError(
           error instanceof Error
             ? error.message
-            : "Không thể lưu bộ phận tiếp nhận.",
+            : "Không thể lưu người phụ trách.",
         );
       }
     });
@@ -463,7 +463,7 @@ export function AdminLogin() {
       setAdminError(
         error instanceof Error
           ? error.message
-          : "Không thể xóa bộ phận tiếp nhận.",
+          : "Không thể xóa người phụ trách.",
       );
     }
   };
@@ -601,7 +601,7 @@ export function AdminLogin() {
   }
 
   return (
-    <main className="site-canvas bg-background text-foreground min-h-dvh pb-6">
+    <main className="site-canvas text-foreground pb-6">
       <div className="mx-auto max-w-5xl px-3 py-4 sm:px-5">
         <DashboardHeader
           ticketCount={tickets.length}
