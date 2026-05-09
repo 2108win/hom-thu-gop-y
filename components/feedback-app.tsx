@@ -4,8 +4,10 @@ import {
   AlertTriangle,
   BadgeCheck,
   BatteryLow,
+  Check,
   ClipboardList,
   Cloudy,
+  Copy,
   Download,
   Frown,
   Headphones,
@@ -128,6 +130,7 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [modalTicket, setModalTicket] = useState<StoredTicket | null>(null);
   const [errorModal, setErrorModal] = useState("");
+  const [copiedModalCode, setCopiedModalCode] = useState(false);
   const [searchCode, setSearchCode] = useState("");
   const [searchResult, setSearchResult] = useState<
     StoredTicket | "not-found" | null
@@ -139,6 +142,18 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const copyModalTicketCode = async () => {
+    if (!modalTicket) {
+      return;
+    }
+
+    await navigator.clipboard
+      ?.writeText(modalTicket.ticket_code)
+      .catch(() => undefined);
+    setCopiedModalCode(true);
+    window.setTimeout(() => setCopiedModalCode(false), 1400);
+  };
 
   const assignedListeners = useMemo(() => {
     const selected = categories.find((category) => category.id === categoryId);
@@ -824,9 +839,28 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                   <span className="text-muted-foreground/70 mb-1 block text-[11px] font-semibold tracking-[0.14em] uppercase">
                     Mã tra cứu
                   </span>
-                  <strong className="text-destructive font-mono text-3xl select-all">
-                    {modalTicket.ticket_code}
-                  </strong>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <strong className="text-destructive font-mono text-3xl select-all">
+                      {modalTicket.ticket_code}
+                    </strong>
+                    <button
+                      type="button"
+                      onClick={() => void copyModalTicketCode()}
+                      className="btn btn-ghost btn-sm focus-lift px-2"
+                      aria-label={
+                        copiedModalCode
+                          ? `Đã copy mã tra cứu ${modalTicket.ticket_code}`
+                          : `Copy mã tra cứu ${modalTicket.ticket_code}`
+                      }
+                      title={copiedModalCode ? "Đã copy" : "Copy mã tra cứu"}
+                    >
+                      {copiedModalCode ? (
+                        <Check className="size-4 text-emerald-600" />
+                      ) : (
+                        <Copy className="size-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <p className="text-muted-foreground mt-3 text-xs font-semibold">
                   Đồng chí lưu lại mã này để tra cứu kết quả xử lý.

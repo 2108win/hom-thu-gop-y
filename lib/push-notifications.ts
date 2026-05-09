@@ -56,7 +56,7 @@ function buildTicketNotification(ticket: StoredTicket) {
     body: `Mã ${ticket.ticket_code}. Người gửi: ${sender}.`,
     icon: "/logo-ludoan234.png",
     badge: "/logo-ludoan234.png",
-    url: "/quan-tri",
+    url: `/quan-tri?tab=tickets&ticket=${encodeURIComponent(ticket.ticket_code)}`,
     ticketCode: ticket.ticket_code,
   };
 }

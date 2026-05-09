@@ -20,18 +20,22 @@
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || "/quan-tri";
+  const url = new URL(event.notification.data?.url || "/quan-tri", self.location.origin);
 
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if ("focus" in client && client.url.includes(url)) {
-          return client.focus();
+        const clientUrl = new URL(client.url);
+
+        if ("focus" in client && clientUrl.pathname === url.pathname) {
+          return client.navigate(url.href).then((navigatedClient) =>
+            navigatedClient ? navigatedClient.focus() : client.focus(),
+          );
         }
       }
 
       if (clients.openWindow) {
-        return clients.openWindow(url);
+        return clients.openWindow(url.href);
       }
     }),
   );

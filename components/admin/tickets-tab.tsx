@@ -1,7 +1,11 @@
 "use client";
 
+import { useEffect } from "react";
+
 import {
   CheckCircle2,
+  Copy,
+  Check,
   LoaderCircle,
   MessageSquareReply,
   Search,
@@ -25,10 +29,13 @@ type TicketsTabProps = {
   statusFilter: StatusFilter;
   categoryFilter: string;
   allowedCategoryIds?: string[];
+  copiedTicketCode: string;
+  highlightedTicketCode: string;
   isActionPending: IsActionPending;
   onQueryChange: (value: string) => void;
   onStatusFilterChange: (value: StatusFilter) => void;
   onCategoryFilterChange: (value: string) => void;
+  onCopyTicketCode: (ticketCode: string) => void;
   onPatchDraft: (ticketCode: string, patch: TicketPatch) => void;
   onSaveReply: (ticketCode: string) => void;
   onSavePatch: (
@@ -45,10 +52,13 @@ export function TicketsTab({
   statusFilter,
   categoryFilter,
   allowedCategoryIds = [],
+  copiedTicketCode,
+  highlightedTicketCode,
   isActionPending,
   onQueryChange,
   onStatusFilterChange,
   onCategoryFilterChange,
+  onCopyTicketCode,
   onPatchDraft,
   onSaveReply,
   onSavePatch,
@@ -59,6 +69,16 @@ export function TicketsTab({
     (category) =>
       !isRestrictedCategories || allowedCategoryIds.includes(category.id),
   );
+
+  useEffect(() => {
+    if (!highlightedTicketCode) {
+      return;
+    }
+
+    document
+      .getElementById(`ticket-${highlightedTicketCode}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightedTicketCode, tickets]);
 
   return (
     <>
@@ -115,13 +135,41 @@ export function TicketsTab({
           tickets.map((ticket) => (
             <article
               key={ticket.ticket_code}
-              className="shine-card focus-lift border-border border bg-white p-4 shadow-sm"
+              id={`ticket-${ticket.ticket_code}`}
+              className={`shine-card focus-lift border bg-white p-4 shadow-sm ${
+                highlightedTicketCode === ticket.ticket_code
+                  ? "border-primary ring-primary/25 ring-2"
+                  : "border-border"
+              }`}
             >
               <div className="border-border/60 mb-3 flex flex-col gap-2 border-b pb-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <strong className="text-destructive block font-mono text-xl">
-                    {ticket.ticket_code}
-                  </strong>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong className="text-destructive block font-mono text-xl">
+                      {ticket.ticket_code}
+                    </strong>
+                    <button
+                      type="button"
+                      onClick={() => onCopyTicketCode(ticket.ticket_code)}
+                      className="btn btn-ghost btn-xs focus-lift px-2"
+                      aria-label={
+                        copiedTicketCode === ticket.ticket_code
+                          ? `Đã copy mã góp ý ${ticket.ticket_code}`
+                          : `Copy mã góp ý ${ticket.ticket_code}`
+                      }
+                      title={
+                        copiedTicketCode === ticket.ticket_code
+                          ? "Đã copy"
+                          : "Copy mã góp ý"
+                      }
+                    >
+                      {copiedTicketCode === ticket.ticket_code ? (
+                        <Check className="size-3.5 text-emerald-600" />
+                      ) : (
+                        <Copy className="size-3.5" />
+                      )}
+                    </button>
+                  </div>
                   <span className="text-muted-foreground/70 text-[11px] font-bold uppercase">
                     {ticket.created_at}
                   </span>

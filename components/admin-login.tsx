@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   FormEvent,
   useCallback,
@@ -37,8 +38,20 @@ import {
   type StoredTicket,
 } from "@/lib/data-models";
 import { copyQrImageToClipboard } from "@/lib/qr-clipboard";
+import { categories } from "@/lib/site-data";
 import { LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
+
+const adminTabs = ["tickets", "surveys", "listeners", "account"] as const;
+const statusFilters = ["all", "pending", "done"] as const;
+
+function isAdminTab(value: string | null): value is AdminTab {
+  return adminTabs.includes(value as AdminTab);
+}
+
+function isStatusFilter(value: string | null): value is StatusFilter {
+  return statusFilters.includes(value as StatusFilter);
+}
 
 function subscribeToOrigin() {
   return () => undefined;
@@ -103,7 +116,6 @@ export function AdminLogin() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<AdminTab>("tickets");
   const [tickets, setTickets] = useState<StoredTicket[]>([]);
   const [managedSurveys, setManagedSurveys] = useState<ManagedSurvey[]>([]);
   const [managedListeners, setManagedListeners] = useState<ManagedListener[]>(
@@ -113,14 +125,12 @@ export function AdminLogin() {
     useState<SurveyDraft>(defaultSurveyDraft);
   const [listenerDraft, setListenerDraft] =
     useState<ListenerDraft>(defaultListenerDraft);
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
   const [loginError, setLoginError] = useState("");
   const [adminError, setAdminError] = useState("");
   const [loading, setLoading] = useState(false);
   const [pendingActions, setPendingActions] = useState<string[]>([]);
   const [copiedId, setCopiedId] = useState("");
+  const [copiedTicketCode, setCopiedTicketCode] = useState("");
   const [copiedQrId, setCopiedQrId] = useState("");
   const [copyingQrId, setCopyingQrId] = useState("");
   const [qrCopyErrorId, setQrCopyErrorId] = useState("");
@@ -134,6 +144,26 @@ export function AdminLogin() {
     getBrowserOrigin,
     getServerOrigin,
   );
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const activeTab = isAdminTab(requestedTab) ? requestedTab : "tickets";
+  const query = searchParams.get("q") ?? "";
+  const highlightedTicketCode = (searchParams.get("ticket") ?? "").trim().toUpperCase();
+  const requestedStatusFilter = searchParams.get("status");
+  const statusFilter = isStatusFilter(requestedStatusFilter)
+    ? requestedStatusFilter
+    : "all";
+  const requestedCategoryFilter = searchParams.get("category") ?? "all";
+  const validCategoryIds = useMemo(
+    () => new Set(categories.map((category) => category.id)),
+    [],
+  );
+  const categoryFilter =
+    requestedCategoryFilter === "all" || validCategoryIds.has(requestedCategoryFilter)
+      ? requestedCategoryFilter
+      : "all";
 
   const readErrorMessage = useCallback(async (response: Response) => {
     try {
@@ -165,6 +195,27 @@ export function AdminLogin() {
   }, [isLoggedIn]);
 
   const isActionPending = (key: string) => pendingActions.includes(key);
+
+  const changeTab = useCallback((tab: AdminTab) => {
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.set("tab", tab);
+    router.replace(`${pathname}?${nextParams.toString()}`, { scroll: false });
+  }, [pathname, router, searchParams]);
+
+  const setUrlParam = useCallback(
+    (key: string, value: string, defaultValue = "") => {
+      const nextParams = new URLSearchParams(searchParams.toString());
+
+      if (value === defaultValue) {
+        nextParams.delete(key);
+      } else {
+        nextParams.set(key, value);
+      }
+
+      router.replace(`${pathname}?${nextParams.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   const runWithActionLoading = async (
     key: string,
@@ -893,6 +944,12 @@ export function AdminLogin() {
     }
   };
 
+  const copyTicketCode = async (ticketCode: string) => {
+    await navigator.clipboard?.writeText(ticketCode).catch(() => undefined);
+    setCopiedTicketCode(ticketCode);
+    window.setTimeout(() => setCopiedTicketCode(""), 1400);
+  };
+
   const isListenerRole = adminProfile?.role === "listener";
   const listenerAllowedCategoryIds = useMemo(
     () => (isListenerRole ? adminProfile?.assignedCategoryIds ?? [] : []),
@@ -917,7 +974,8 @@ export function AdminLogin() {
         !isListenerRole ||
         listenerAllowedCategoryIds.includes(ticket.category_id);
       const matchedQuery =
-        !normalized ||
+        (!normalized && !highlightedTicketCode) ||
+        ticket.ticket_code === highlightedTicketCode ||
         [
           ticket.ticket_code,
           ticket.category,
@@ -935,6 +993,7 @@ export function AdminLogin() {
     });
   }, [
     effectiveCategoryFilter,
+    highlightedTicketCode,
     isListenerRole,
     listenerAllowedCategoryIds,
     query,
@@ -955,6 +1014,18 @@ export function AdminLogin() {
     activeTab !== "account"
       ? "tickets"
       : activeTab;
+
+  useEffect(() => {
+    if (isLoggedIn && effectiveActiveTab !== activeTab) {
+      changeTab(effectiveActiveTab);
+    }
+  }, [activeTab, changeTab, effectiveActiveTab, isLoggedIn]);
+
+  useEffect(() => {
+    if (isLoggedIn && effectiveCategoryFilter !== categoryFilter) {
+      setUrlParam("category", effectiveCategoryFilter, "all");
+    }
+  }, [categoryFilter, effectiveCategoryFilter, isLoggedIn, setUrlParam]);
 
   if (checkingSession) {
     return (
@@ -999,7 +1070,7 @@ export function AdminLogin() {
         <AdminTabs
           activeTab={effectiveActiveTab}
           role={adminProfile?.role}
-          onChange={setActiveTab}
+          onChange={changeTab}
         />
 
         {adminProfile?.role === "listener" && !currentDevicePushEnabled && (
@@ -1038,10 +1109,13 @@ export function AdminLogin() {
             statusFilter={statusFilter}
             categoryFilter={effectiveCategoryFilter}
             allowedCategoryIds={listenerAllowedCategoryIds}
+            copiedTicketCode={copiedTicketCode}
+            highlightedTicketCode={highlightedTicketCode}
             isActionPending={isActionPending}
-            onQueryChange={setQuery}
-            onStatusFilterChange={setStatusFilter}
-            onCategoryFilterChange={setCategoryFilter}
+            onQueryChange={(value) => setUrlParam("q", value.trim(), "")}
+            onStatusFilterChange={(value) => setUrlParam("status", value, "all")}
+            onCategoryFilterChange={(value) => setUrlParam("category", value, "all")}
+            onCopyTicketCode={(ticketCode) => void copyTicketCode(ticketCode)}
             onPatchDraft={patchTicketDraft}
             onSaveReply={(ticketCode) => void saveTicketReply(ticketCode)}
             onSavePatch={(ticketCode, patch, actionKey) =>

@@ -2,6 +2,7 @@
 
 import {
   CalendarClock,
+  Check,
   Copy,
   ExternalLink,
   LinkIcon,
@@ -305,29 +306,51 @@ export function SurveysTab({
                       <button
                         type="button"
                         onClick={() => onCopyLink(survey.id)}
-                        className="btn btn-accent focus-lift gap-2 border-(--military-medal)/45 px-3 text-xs font-semibold uppercase"
+                        className="btn btn-accent focus-lift border-(--military-medal)/45 px-3"
+                        aria-label={
+                          copiedId === survey.id
+                            ? "Đã sao chép link khảo sát"
+                            : "Sao chép link khảo sát"
+                        }
+                        title={
+                          copiedId === survey.id
+                            ? "Đã sao chép"
+                            : "Sao chép link"
+                        }
                       >
-                        <Copy className="size-4" />
-                        {copiedId === survey.id ? "Đã sao chép" : "Sao chép"}
+                        {copiedId === survey.id ? (
+                          <Check className="size-4 text-emerald-700" />
+                        ) : (
+                          <Copy className="size-4" />
+                        )}
                       </button>
                       <button
                         type="button"
                         onClick={() => onCopyQr(survey.id)}
                         disabled={copyingQrId === survey.id}
-                        className="btn btn-outline focus-lift text-primary hover:bg-accent/30 border-(--military-medal)/45 bg-white px-3 text-xs font-semibold uppercase"
-                      >
-                        {copyingQrId === survey.id ? (
-                          <LoaderCircle className="size-4 animate-spin" />
-                        ) : (
-                          <QrCode className="size-4" />
-                        )}
-                        {copyingQrId === survey.id
-                          ? "Đang sao chép"
-                          : copiedQrId === survey.id
+                        className="btn btn-outline focus-lift text-primary hover:bg-accent/30 border-(--military-medal)/45 bg-white px-3"
+                        aria-label={
+                          copiedQrId === survey.id
+                            ? "Đã sao chép QR khảo sát"
+                            : qrCopyErrorId === survey.id
+                              ? "Không copy được QR khảo sát"
+                              : "Sao chép QR khảo sát"
+                        }
+                        title={
+                          copiedQrId === survey.id
                             ? "Đã sao chép QR"
                             : qrCopyErrorId === survey.id
                               ? "Không copy được"
-                              : "Sao chép QR"}
+                              : "Sao chép QR"
+                        }
+                      >
+                        {copyingQrId === survey.id ? (
+                          <LoaderCircle className="size-4 animate-spin" />
+                        ) : copiedQrId === survey.id ? (
+                          <Check className="size-4 text-emerald-700" />
+                        ) : (
+                          <QrCode className="size-4" />
+                        )}
                       </button>
                       <Link
                         href={`/khao-sat/${encodeURIComponent(survey.id)}`}
