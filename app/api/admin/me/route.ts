@@ -8,13 +8,23 @@ import {
   getAdminSession,
 } from "@/lib/admin-auth";
 import { badRequest, jsonError } from "@/lib/api-utils";
-import { getAdminAccount, patchAdminAccount } from "@/lib/data-store";
+import {
+  getAdminAccount,
+  getManagedListeners,
+  patchManagedListener,
+  patchAdminAccount,
+} from "@/lib/data-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type AdminProfileBody = {
   displayName?: unknown;
+  email?: unknown;
+  phone?: unknown;
+  rank?: unknown;
+  position?: unknown;
+  unit?: unknown;
   currentPassword?: unknown;
   newPassword?: unknown;
   confirmPassword?: unknown;
@@ -25,10 +35,39 @@ async function requireAdminSession() {
   return getAdminSession(cookieStore.get(adminCookieName)?.value);
 }
 
-function adminPayload(account: { username: string; display_name: string }) {
+async function adminPayload(account: {
+  username: string;
+  display_name: string;
+  role?: string;
+  listener_id?: string;
+  email?: string;
+  phone?: string;
+  rank?: string;
+  position?: string;
+  unit?: string;
+}) {
+  const role = account.role === "listener" ? "listener" : "admin";
+  const listenerId = account.listener_id ?? "";
+  const assignedCategoryIds =
+    role === "listener" && listenerId
+      ? (
+          (await getManagedListeners()).find(
+            (listener) => listener.id === listenerId,
+          )?.assigned_categories ?? []
+        )
+      : [];
+
   return {
     username: account.username,
     displayName: account.display_name,
+    role,
+    listenerId,
+    email: account.email ?? "",
+    phone: account.phone ?? "",
+    rank: account.rank ?? "",
+    position: account.position ?? "",
+    unit: account.unit ?? "",
+    assignedCategoryIds,
   };
 }
 
@@ -49,12 +88,16 @@ function unauthorized() {
 
 function setAdminCookie(
   response: NextResponse,
-  username: string,
-  displayName: string,
+  account: { username: string; display_name: string; role?: string; listener_id?: string },
 ) {
   response.cookies.set(
     adminCookieName,
-    createAdminSessionValue(username, displayName),
+    createAdminSessionValue({
+      user: account.username,
+      displayName: account.display_name,
+      role: account.role === "listener" ? "listener" : "admin",
+      listenerId: account.listener_id ?? "",
+    }),
     {
       httpOnly: true,
       sameSite: "lax",
@@ -77,7 +120,7 @@ export async function GET() {
       return unauthorized();
     }
 
-    return NextResponse.json({ admin: adminPayload(account) });
+    return NextResponse.json({ admin: await adminPayload(account) });
   } catch (error) {
     return jsonError(error, "Không thể tải thông tin tài khoản.");
   }
@@ -96,7 +139,15 @@ export async function PATCH(request: Request) {
     }
 
     const body = (await request.json()) as AdminProfileBody;
-    const patch: Partial<{ display_name: string; password: string }> = {};
+    const patch: Partial<{
+      display_name: string;
+      password: string;
+      email: string;
+      phone: string;
+      rank: string;
+      position: string;
+      unit: string;
+    }> = {};
 
     if (typeof body.displayName === "string") {
       const displayName = body.displayName.trim();
@@ -104,6 +155,21 @@ export async function PATCH(request: Request) {
         return badRequest("Vui lòng nhập tên hiển thị.");
       }
       patch.display_name = displayName;
+    }
+    if (typeof body.email === "string") {
+      patch.email = body.email.trim();
+    }
+    if (typeof body.phone === "string") {
+      patch.phone = body.phone.trim();
+    }
+    if (typeof body.rank === "string") {
+      patch.rank = body.rank.trim();
+    }
+    if (typeof body.position === "string") {
+      patch.position = body.position.trim();
+    }
+    if (typeof body.unit === "string") {
+      patch.unit = body.unit.trim();
     }
 
     const currentPassword =
@@ -140,8 +206,25 @@ export async function PATCH(request: Request) {
       patch.password = newPassword;
     }
 
-    if (!patch.display_name && !patch.password) {
+    if (
+      !patch.display_name &&
+      !patch.password &&
+      patch.email === undefined &&
+      patch.phone === undefined &&
+      patch.rank === undefined &&
+      patch.position === undefined &&
+      patch.unit === undefined
+    ) {
       return badRequest("Không có thông tin cần cập nhật.");
+    }
+
+    if (account.role === "listener" && account.listener_id) {
+      await patchManagedListener(account.listener_id, {
+        fullname: patch.display_name ?? account.display_name,
+        phone: patch.phone ?? account.phone ?? "",
+        rank: patch.rank ?? account.rank ?? "",
+        position: patch.position ?? account.position ?? "",
+      });
     }
 
     const updatedAccount = await patchAdminAccount(account.username, patch);
@@ -152,12 +235,8 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const response = NextResponse.json({ admin: adminPayload(updatedAccount) });
-    setAdminCookie(
-      response,
-      updatedAccount.username,
-      updatedAccount.display_name,
-    );
+    const response = NextResponse.json({ admin: await adminPayload(updatedAccount) });
+    setAdminCookie(response, updatedAccount);
     return response;
   } catch (error) {
     return jsonError(error, "Không thể cập nhật tài khoản.");

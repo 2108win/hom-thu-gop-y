@@ -4,6 +4,7 @@ import type { AdminTab } from "@/components/admin/types";
 
 type AdminTabsProps = {
   activeTab: AdminTab;
+  role?: "admin" | "listener";
   onChange: (tab: AdminTab) => void;
 };
 
@@ -14,10 +15,12 @@ const tabs: Array<[AdminTab, string]> = [
   ["account", "Tài khoản"],
 ];
 
-export function AdminTabs({ activeTab, onChange }: AdminTabsProps) {
+export function AdminTabs({ activeTab, role = "admin", onChange }: AdminTabsProps) {
+  const visibleTabs = role === "listener" ? tabs.filter(([value]) => value === "tickets" || value === "account") : tabs;
+
   return (
-    <div className="tabs tabs-box mb-4 grid w-full grid-cols-4 shadow-sm">
-      {tabs.map(([value, label]) => (
+    <div className={`tabs tabs-box mb-4 grid w-full shadow-sm ${visibleTabs.length === 2 ? "grid-cols-2" : "grid-cols-4"}`}>
+      {visibleTabs.map(([value, label]) => (
         <button
           key={value}
           type="button"

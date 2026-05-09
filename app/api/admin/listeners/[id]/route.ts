@@ -1,11 +1,14 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { adminCookieName, isValidAdminSession } from "@/lib/admin-auth";
+import { adminCookieName, getAdminSession } from "@/lib/admin-auth";
 import { badRequest, jsonError } from "@/lib/api-utils";
-import { formatDateTime, type ManagedListener } from "@/lib/data-models";
+import type { ManagedListener } from "@/lib/data-models";
 import {
+  getAdminAccounts,
+  getAdminAccount,
   patchManagedListener,
+  patchAdminAccount,
   removeManagedListener,
 } from "@/lib/data-store";
 import { categories } from "@/lib/site-data";
@@ -21,7 +24,13 @@ type AdminListenerRouteProps = {
 
 async function requireAdmin() {
   const cookieStore = await cookies();
-  return isValidAdminSession(cookieStore.get(adminCookieName)?.value);
+  const session = getAdminSession(cookieStore.get(adminCookieName)?.value);
+  if (!session) {
+    return false;
+  }
+
+  const account = await getAdminAccount(session.user);
+  return Boolean(account?.is_enabled && account.role === "admin");
 }
 
 function cleanAssignedCategories(value: unknown) {
@@ -87,7 +96,7 @@ export async function PATCH(
       patch.is_enabled = body.is_enabled;
     }
 
-    patch.updated_at = formatDateTime();
+    patch.updated_at = new Date().toISOString();
 
     const listener = await patchManagedListener(id, patch);
     if (!listener) {
@@ -95,6 +104,19 @@ export async function PATCH(
         { message: "Không tìm thấy người phụ trách." },
         { status: 404 },
       );
+    }
+
+    const linkedAccount = (await getAdminAccounts()).find(
+      (account) => account.listener_id === id,
+    );
+    if (linkedAccount) {
+      await patchAdminAccount(linkedAccount.username, {
+        display_name: listener.fullname,
+        phone: listener.phone,
+        rank: listener.rank,
+        position: listener.position,
+        is_enabled: listener.is_enabled,
+      });
     }
 
     return NextResponse.json({ listener });

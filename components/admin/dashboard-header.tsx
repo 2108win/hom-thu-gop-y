@@ -23,6 +23,7 @@ type DashboardHeaderProps = {
   doneCount: number;
   openSurveyCount: number;
   surveyCount: number;
+  showSurveyStats?: boolean;
   loading: boolean;
   isActionPending: IsActionPending;
   onLogout: () => void;
@@ -36,6 +37,7 @@ export function DashboardHeader({
   doneCount,
   openSurveyCount,
   surveyCount,
+  showSurveyStats = true,
   loading,
   isActionPending,
   onLogout,
@@ -96,7 +98,11 @@ export function DashboardHeader({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div
+        className={`grid grid-cols-2 gap-2 ${
+          showSurveyStats ? "sm:grid-cols-4" : "sm:grid-cols-3"
+        }`}
+      >
         <div className="metric-tile p-3">
           <Inbox className="mb-2 size-5 text-(--military-medal-soft)" />
           <p className="text-2xl font-semibold">{ticketCount}</p>
@@ -118,15 +124,17 @@ export function DashboardHeader({
             Đã xử lý
           </p>
         </div>
-        <div className="metric-tile p-3">
-          <FileSpreadsheet className="mb-2 size-5 text-(--military-medal-soft)" />
-          <p className="text-2xl font-semibold">
-            {openSurveyCount}/{surveyCount}
-          </p>
-          <p className="text-[10px] font-semibold text-white/70 uppercase">
-            Khảo sát đang mở
-          </p>
-        </div>
+        {showSurveyStats && (
+          <div className="metric-tile p-3">
+            <FileSpreadsheet className="mb-2 size-5 text-(--military-medal-soft)" />
+            <p className="text-2xl font-semibold">
+              {openSurveyCount}/{surveyCount}
+            </p>
+            <p className="text-[10px] font-semibold text-white/70 uppercase">
+              Khảo sát đang mở
+            </p>
+          </div>
+        )}
       </div>
     </header>
   );

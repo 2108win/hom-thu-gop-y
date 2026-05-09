@@ -72,10 +72,7 @@ export async function PATCH(
       patch.is_enabled = body.is_enabled;
     }
 
-    patch.updated_at = new Intl.DateTimeFormat("vi-VN", {
-      dateStyle: "short",
-      timeStyle: "short",
-    }).format(new Date());
+    patch.updated_at = new Date().toISOString();
 
     const survey = await patchManagedSurvey(id, patch);
     if (!survey) {

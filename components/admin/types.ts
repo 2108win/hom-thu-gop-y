@@ -11,6 +11,14 @@ export type StatusFilter = "all" | TicketStatus;
 export type AdminProfile = {
   username: string;
   displayName: string;
+  role: "admin" | "listener";
+  listenerId: string;
+  assignedCategoryIds: string[];
+  email: string;
+  phone: string;
+  rank: string;
+  position: string;
+  unit: string;
 };
 
 export type SurveyDraft = {

@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+﻿import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import {
@@ -7,8 +7,14 @@ import {
   type AdminSession,
 } from "@/lib/admin-auth";
 import { jsonError } from "@/lib/api-utils";
-import type { StoredTicket } from "@/lib/data-models";
-import { patchTicket, removeTicket } from "@/lib/data-store";
+import type { ManagedAdminAccount, StoredTicket } from "@/lib/data-models";
+import {
+  findTicket,
+  getAdminAccount,
+  getManagedListeners,
+  patchTicket,
+  removeTicket,
+} from "@/lib/data-store";
 
 export const runtime = "nodejs";
 
@@ -18,22 +24,60 @@ type AdminTicketRouteProps = {
   }>;
 };
 
-async function requireAdmin() {
+type AuthorizedAccount = ManagedAdminAccount & {
+  session: AdminSession;
+};
+
+async function requireAccount() {
   const cookieStore = await cookies();
-  return getAdminSession(cookieStore.get(adminCookieName)?.value);
+  const session = getAdminSession(cookieStore.get(adminCookieName)?.value);
+  if (!session) {
+    return null;
+  }
+
+  const account = await getAdminAccount(session.user);
+  if (!account?.is_enabled) {
+    return null;
+  }
+
+  return { ...account, session } satisfies AuthorizedAccount;
+}
+
+async function canAccessTicket(
+  account: AuthorizedAccount,
+  ticket: StoredTicket | null,
+) {
+  if (!ticket) {
+    return false;
+  }
+  if (account.role !== "listener") {
+    return true;
+  }
+
+  const listeners = await getManagedListeners();
+  const listener = listeners.find((item) => item.id === account.listener_id);
+  return Boolean(listener?.assigned_categories.includes(ticket.category_id));
 }
 
 export async function PATCH(
   request: Request,
   { params }: AdminTicketRouteProps,
 ) {
-  const adminSession = await requireAdmin();
-  if (!adminSession) {
+  const account = await requireAccount();
+  if (!account) {
     return NextResponse.json({ message: "Chưa đăng nhập." }, { status: 401 });
   }
 
   try {
     const { code } = await params;
+    const existingTicket = await findTicket(code);
+    if (!(await canAccessTicket(account, existingTicket))) {
+      return NextResponse.json(
+        { message: "Không có quyền cập nhật phiếu này." },
+        { status: 403 },
+      );
+    }
+
     const body = (await request.json()) as Record<string, unknown>;
     const patch: Partial<StoredTicket> = {};
 
@@ -42,10 +86,10 @@ export async function PATCH(
     }
     if (typeof body.admin_reply === "string") {
       patch.admin_reply = body.admin_reply;
-      applyReplyMetadata(patch, adminSession);
+      applyReplyMetadata(patch, account.session);
     }
     if (patch.status === "done") {
-      applyReplyMetadata(patch, adminSession);
+      applyReplyMetadata(patch, account.session);
     }
     if (typeof body.replied_at === "string") {
       patch.replied_at = body.replied_at;
@@ -70,8 +114,15 @@ export async function DELETE(
   _request: Request,
   { params }: AdminTicketRouteProps,
 ) {
-  if (!(await requireAdmin())) {
+  const account = await requireAccount();
+  if (!account) {
     return NextResponse.json({ message: "Chưa đăng nhập." }, { status: 401 });
+  }
+  if (account.role === "listener") {
+    return NextResponse.json(
+      { message: "Người phụ trách không có quyền xóa phiếu." },
+      { status: 403 },
+    );
   }
 
   try {

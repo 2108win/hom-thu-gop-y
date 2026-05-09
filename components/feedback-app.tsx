@@ -2,6 +2,7 @@
 
 import {
   AlertTriangle,
+  BadgeCheck,
   BatteryLow,
   ClipboardList,
   Cloudy,
@@ -526,6 +527,9 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                                 <div className="min-w-0">
                                   <p className="text-foreground line-clamp-2 text-sm font-semibold break-all">
                                     {user.rank} {user.fullname}
+                                    {user.has_linked_account ? (
+                                      <BadgeCheck className="ml-1 inline size-3.5 align-[-2px] text-blue-600" />
+                                    ) : null}
                                   </p>
                                   <p className="text-muted-foreground text-xs leading-4 font-medium">
                                     {user.position}

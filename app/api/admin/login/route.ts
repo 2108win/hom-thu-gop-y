@@ -10,6 +10,7 @@ import { jsonError } from "@/lib/api-utils";
 import {
   adminAccountStoreName,
   authenticateAdminAccount,
+  getManagedListeners,
   storageProvider,
 } from "@/lib/data-store";
 
@@ -46,7 +47,12 @@ export async function POST(request: Request) {
     const cookieStore = await cookies();
     cookieStore.set(
       adminCookieName,
-      createAdminSessionValue(auth.username, auth.displayName),
+      createAdminSessionValue({
+        user: auth.username,
+        displayName: auth.displayName,
+        role: auth.role,
+        listenerId: auth.listenerId,
+      }),
       {
         httpOnly: true,
         sameSite: "lax",
@@ -61,6 +67,21 @@ export async function POST(request: Request) {
       admin: {
         username: auth.username,
         displayName: auth.displayName,
+        role: auth.role,
+        listenerId: auth.listenerId,
+        email: auth.email,
+        phone: auth.phone,
+        rank: auth.rank,
+        position: auth.position,
+        unit: auth.unit,
+        assignedCategoryIds:
+          auth.role === "listener" && auth.listenerId
+            ? (
+                (await getManagedListeners()).find(
+                  (listener) => listener.id === auth.listenerId,
+                )?.assigned_categories ?? []
+              )
+            : [],
       },
     });
   } catch (error) {

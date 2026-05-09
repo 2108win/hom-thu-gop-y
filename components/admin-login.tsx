@@ -56,6 +56,19 @@ function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let index = 0; index < rawData.length; index += 1) {
+    outputArray[index] = rawData.charCodeAt(index);
+  }
+
+  return outputArray;
+}
+
 function sortListeners(listeners: ManagedListener[]) {
   return [...listeners].sort((a, b) => a.order - b.order);
 }
@@ -76,6 +89,7 @@ export function AdminLogin() {
     useState<ListenerDraft>(defaultListenerDraft);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [loginError, setLoginError] = useState("");
   const [adminError, setAdminError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -131,49 +145,60 @@ export function AdminLogin() {
   };
 
   const loadData = useCallback(
-    async (successToast?: string) => {
+    async (successToast?: string, role: AdminProfile["role"] = "admin") => {
       setLoading(true);
       setAdminError("");
 
       try {
-        const [ticketsResponse, surveysResponse, listenersResponse] =
-          await Promise.all([
-            fetch("/api/admin/tickets", { cache: "no-store" }),
-            fetch("/api/admin/surveys", { cache: "no-store" }),
-            fetch("/api/admin/listeners", { cache: "no-store" }),
-          ]);
+        const ticketsResponse = await fetch("/api/admin/tickets", {
+          cache: "no-store",
+        });
 
-        if (
-          ticketsResponse.status === 401 ||
-          surveysResponse.status === 401 ||
-          listenersResponse.status === 401
-        ) {
+        if (ticketsResponse.status === 401) {
           clearAdminState();
           throw new Error("Phiên quản trị đã hết hạn.");
         }
         if (!ticketsResponse.ok) {
           throw new Error(await readErrorMessage(ticketsResponse));
         }
-        if (!surveysResponse.ok) {
-          throw new Error(await readErrorMessage(surveysResponse));
-        }
-        if (!listenersResponse.ok) {
-          throw new Error(await readErrorMessage(listenersResponse));
-        }
 
         const ticketsData = (await ticketsResponse.json()) as {
           tickets: StoredTicket[];
         };
-        const surveysData = (await surveysResponse.json()) as {
-          surveys: ManagedSurvey[];
-        };
-        const listenersData = (await listenersResponse.json()) as {
-          listeners: ManagedListener[];
-        };
 
         setTickets(ticketsData.tickets);
-        setManagedSurveys(surveysData.surveys);
-        setManagedListeners(sortListeners(listenersData.listeners));
+
+        if (role === "listener") {
+          setManagedSurveys([]);
+          setManagedListeners([]);
+        } else {
+          const [surveysResponse, listenersResponse] = await Promise.all([
+            fetch("/api/admin/surveys", { cache: "no-store" }),
+            fetch("/api/admin/listeners", { cache: "no-store" }),
+          ]);
+
+          if (surveysResponse.status === 401 || listenersResponse.status === 401) {
+            clearAdminState();
+            throw new Error("Phiên quản trị đã hết hạn.");
+          }
+          if (!surveysResponse.ok) {
+            throw new Error(await readErrorMessage(surveysResponse));
+          }
+          if (!listenersResponse.ok) {
+            throw new Error(await readErrorMessage(listenersResponse));
+          }
+
+          const surveysData = (await surveysResponse.json()) as {
+            surveys: ManagedSurvey[];
+          };
+          const listenersData = (await listenersResponse.json()) as {
+            listeners: ManagedListener[];
+          };
+
+          setManagedSurveys(surveysData.surveys);
+          setManagedListeners(sortListeners(listenersData.listeners));
+        }
+
         if (successToast) {
           toast.success(successToast);
         }
@@ -207,7 +232,7 @@ export function AdminLogin() {
 
         setAdminProfile(data.admin);
         setIsLoggedIn(true);
-        await loadData();
+        await loadData(undefined, data.admin.role);
       } catch {
         if (!ignore) {
           clearAdminState();
@@ -250,9 +275,9 @@ export function AdminLogin() {
       const data = (await response.json()) as { admin?: AdminProfile };
       if (data.admin) {
         setAdminProfile(data.admin);
+        await loadData(undefined, data.admin.role);
       }
       setIsLoggedIn(true);
-      await loadData();
       toast.success("Đăng nhập thành công.", { id: toastId });
     } catch (error) {
       const message = errorMessage(
@@ -492,21 +517,12 @@ export function AdminLogin() {
     });
   };
 
-  const patchListenerDraft = (
-    listenerId: string,
-    patch: Partial<ManagedListener>,
-  ) => {
-    setManagedListeners((current) =>
-      current.map((listener) =>
-        listener.id === listenerId ? { ...listener, ...patch } : listener,
-      ),
-    );
-  };
-
   const saveListener = async (
     listener: ManagedListener,
     actionKey = `listener:${listener.id}:save`,
   ) => {
+    let saved = false;
+
     await runWithActionLoading(actionKey, async () => {
       setAdminError("");
       const toastId = toast.loading("Đang lưu người phụ trách...");
@@ -534,12 +550,15 @@ export function AdminLogin() {
           ),
         );
         toast.success("Đã lưu người phụ trách.", { id: toastId });
+        saved = true;
       } catch (error) {
         const message = errorMessage(error, "Không thể lưu người phụ trách.");
         setAdminError(message);
         toast.error(message, { id: toastId });
       }
     });
+
+    return saved;
   };
 
   const moveListener = async (listenerId: string, direction: "up" | "down") => {
@@ -662,22 +681,6 @@ export function AdminLogin() {
     setDeleteConfirm(null);
   };
 
-  const toggleListenerCategory = (listenerId: string, categoryId: string) => {
-    setManagedListeners((current) =>
-      current.map((listener) => {
-        if (listener.id !== listenerId) {
-          return listener;
-        }
-
-        const assigned = listener.assigned_categories.includes(categoryId)
-          ? listener.assigned_categories.filter((item) => item !== categoryId)
-          : [...listener.assigned_categories, categoryId];
-
-        return { ...listener, assigned_categories: assigned };
-      }),
-    );
-  };
-
   const toggleDraftCategory = (categoryId: string) => {
     setListenerDraft((current) => {
       const assigned = current.assigned_categories.includes(categoryId)
@@ -685,6 +688,75 @@ export function AdminLogin() {
         : [...current.assigned_categories, categoryId];
 
       return { ...current, assigned_categories: assigned };
+    });
+  };
+
+  const enablePushForListener = async (listener?: ManagedListener) => {
+    const listenerId = listener?.id ?? adminProfile?.listenerId ?? "";
+    await runWithActionLoading(`listener:${listenerId || "self"}:push`, async () => {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        toast.error("Trình duyệt này chưa hỗ trợ thông báo web.");
+        return;
+      }
+
+      const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!publicKey) {
+        toast.error("Chưa cấu hình VAPID public key cho thông báo.");
+        return;
+      }
+
+      if (listener && !listener.assigned_categories.length) {
+        toast.error("Người phụ trách chưa có nhóm nội dung phụ trách.");
+        return;
+      }
+
+      const toastId = toast.loading("Đang bật thông báo trên thiết bị...");
+
+      try {
+        const registration = await navigator.serviceWorker.register("/sw.js", {
+          scope: "/",
+          updateViaCache: "none",
+        });
+        const permission = await Notification.requestPermission();
+
+        if (permission !== "granted") {
+          toast.error("Thiết bị chưa cho phép nhận thông báo.", { id: toastId });
+          return;
+        }
+
+        const existingSubscription =
+          await registration.pushManager.getSubscription();
+        const subscription =
+          existingSubscription ??
+          (await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey),
+          }));
+
+        const response = await fetch("/api/admin/push-subscriptions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            listenerId,
+            subscription: JSON.parse(JSON.stringify(subscription)),
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(await readErrorMessage(response));
+        }
+
+        toast.success(
+          listener
+            ? `Thiết bị này sẽ nhận thông báo cho ${listener.fullname}.`
+            : "Thiết bị này sẽ nhận thông báo cho tài khoản của bạn.",
+          { id: toastId },
+        );
+      } catch (error) {
+        toast.error(errorMessage(error, "Không thể bật thông báo."), {
+          id: toastId,
+        });
+      }
     });
   };
 
@@ -726,11 +798,29 @@ export function AdminLogin() {
     }
   };
 
+  const isListenerRole = adminProfile?.role === "listener";
+  const listenerAllowedCategoryIds = useMemo(
+    () => (isListenerRole ? adminProfile?.assignedCategoryIds ?? [] : []),
+    [adminProfile?.assignedCategoryIds, isListenerRole],
+  );
+  const effectiveCategoryFilter =
+    isListenerRole &&
+    categoryFilter !== "all" &&
+    !listenerAllowedCategoryIds.includes(categoryFilter)
+      ? "all"
+      : categoryFilter;
+
   const filteredTickets = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return tickets.filter((ticket) => {
       const matchedStatus =
         statusFilter === "all" || ticket.status === statusFilter;
+      const matchedCategory =
+        effectiveCategoryFilter === "all" ||
+        ticket.category_id === effectiveCategoryFilter;
+      const hasPermission =
+        !isListenerRole ||
+        listenerAllowedCategoryIds.includes(ticket.category_id);
       const matchedQuery =
         !normalized ||
         [
@@ -746,9 +836,16 @@ export function AdminLogin() {
           .toLowerCase()
           .includes(normalized);
 
-      return matchedStatus && matchedQuery;
+      return hasPermission && matchedStatus && matchedCategory && matchedQuery;
     });
-  }, [query, statusFilter, tickets]);
+  }, [
+    effectiveCategoryFilter,
+    isListenerRole,
+    listenerAllowedCategoryIds,
+    query,
+    statusFilter,
+    tickets,
+  ]);
 
   const pendingCount = tickets.filter(
     (ticket) => ticket.status === "pending",
@@ -757,6 +854,12 @@ export function AdminLogin() {
   const openSurveyCount = managedSurveys.filter((survey) =>
     isSurveyOpen(survey),
   ).length;
+  const effectiveActiveTab =
+    adminProfile?.role === "listener" &&
+    activeTab !== "tickets" &&
+    activeTab !== "account"
+      ? "tickets"
+      : activeTab;
 
   if (checkingSession) {
     return (
@@ -789,13 +892,43 @@ export function AdminLogin() {
           doneCount={doneCount}
           openSurveyCount={openSurveyCount}
           surveyCount={managedSurveys.length}
+          showSurveyStats={adminProfile?.role !== "listener"}
           loading={loading}
           isActionPending={isActionPending}
           onLogout={() => void handleLogout()}
-          onRefresh={() => void loadData("Dữ liệu đã được làm mới.")}
+          onRefresh={() =>
+            void loadData("Dữ liệu đã được làm mới.", adminProfile?.role ?? "admin")
+          }
         />
 
-        <AdminTabs activeTab={activeTab} onChange={setActiveTab} />
+        <AdminTabs
+          activeTab={effectiveActiveTab}
+          role={adminProfile?.role}
+          onChange={setActiveTab}
+        />
+
+        {adminProfile?.role === "listener" && (
+          <div className="rounded-box border-border mb-4 flex flex-col gap-3 border bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-foreground text-sm font-bold uppercase">
+                Tài khoản người phụ trách
+              </p>
+              <p className="text-muted-foreground text-xs font-semibold">
+                Bạn chỉ thấy phiếu thuộc nhóm nội dung được phân công.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void enablePushForListener()}
+              disabled={isActionPending(
+                `listener:${adminProfile.listenerId || "self"}:push`,
+              )}
+              className="btn btn-primary btn-sm focus-lift px-3 text-xs font-semibold uppercase"
+            >
+              Bật thông báo trên thiết bị này
+            </button>
+          </div>
+        )}
 
         {adminError && (
           <div className="rounded-field mb-4 border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-700">
@@ -803,14 +936,17 @@ export function AdminLogin() {
           </div>
         )}
 
-        {activeTab === "tickets" ? (
+        {effectiveActiveTab === "tickets" ? (
           <TicketsTab
             tickets={filteredTickets}
             query={query}
             statusFilter={statusFilter}
+            categoryFilter={effectiveCategoryFilter}
+            allowedCategoryIds={listenerAllowedCategoryIds}
             isActionPending={isActionPending}
             onQueryChange={setQuery}
             onStatusFilterChange={setStatusFilter}
+            onCategoryFilterChange={setCategoryFilter}
             onPatchDraft={patchTicketDraft}
             onSaveReply={(ticketCode) => void saveTicketReply(ticketCode)}
             onSavePatch={(ticketCode, patch, actionKey) =>
@@ -818,7 +954,7 @@ export function AdminLogin() {
             }
             onDeleteRequest={setDeleteConfirm}
           />
-        ) : activeTab === "surveys" ? (
+        ) : effectiveActiveTab === "surveys" && adminProfile?.role !== "listener" ? (
           <SurveysTab
             surveyDraft={surveyDraft}
             surveys={managedSurveys}
@@ -836,28 +972,29 @@ export function AdminLogin() {
             onCopyQr={(surveyId) => void copySurveyQr(surveyId)}
             onDeleteRequest={setDeleteConfirm}
           />
-        ) : activeTab === "listeners" ? (
+        ) : effectiveActiveTab === "listeners" && adminProfile?.role !== "listener" ? (
           <ListenersTab
             listenerDraft={listenerDraft}
             listeners={managedListeners}
             isActionPending={isActionPending}
             setListenerDraft={setListenerDraft}
             onCreateListener={(event) => void createListener(event)}
-            onPatchDraft={patchListenerDraft}
-            onSave={(listener, actionKey) =>
-              void saveListener(listener, actionKey)
-            }
+            onSave={saveListener}
             onMove={(listenerId, direction) =>
               void moveListener(listenerId, direction)
             }
-            onToggleCategory={toggleListenerCategory}
             onToggleDraftCategory={toggleDraftCategory}
+            onEnablePush={(listener) => void enablePushForListener(listener)}
             onDeleteRequest={setDeleteConfirm}
           />
         ) : adminProfile ? (
           <AccountTab
             profile={adminProfile}
+            listeners={managedListeners}
             onProfileChange={setAdminProfile}
+            onLinkedDataChange={() =>
+              loadData(undefined, adminProfile.role)
+            }
             onUnauthorized={clearAdminState}
           />
         ) : null}

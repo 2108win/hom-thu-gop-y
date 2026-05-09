@@ -52,6 +52,22 @@ export type ManagedListener = {
   order: number;
   assigned_categories: string[];
   is_enabled: boolean;
+  has_linked_account?: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PushSubscriptionKeys = {
+  p256dh: string;
+  auth: string;
+};
+
+export type ManagedPushSubscription = {
+  endpoint: string;
+  listener_id: string;
+  p256dh: string;
+  auth: string;
+  user_agent: string;
   created_at: string;
   updated_at: string;
 };
@@ -60,15 +76,19 @@ export type ManagedAdminAccount = {
   username: string;
   password: string;
   display_name: string;
+  role: "admin" | "listener";
+  listener_id: string;
+  email: string;
+  phone: string;
+  rank: string;
+  position: string;
+  unit: string;
   is_enabled: boolean;
   updated_at: string;
 };
 
 export function formatDateTime() {
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date());
+  return new Date().toISOString();
 }
 
 export function normalizeTicketCode(value: string) {
@@ -97,7 +117,7 @@ export function createTicket(input: {
     unit: input.isAnonymous ? "" : input.unit,
     admin_reply: "",
     replied_by: "",
-    replied_at: "",
+    replied_at: undefined,
     bot_reply:
       "Nội dung đã được tiếp nhận. Đồng chí lưu lại mã tra cứu để theo dõi kết quả xử lý.",
   } satisfies StoredTicket;
@@ -171,12 +191,26 @@ export function createManagedAdminAccount(input: {
   username: string;
   password: string;
   displayName: string;
+  role?: "admin" | "listener";
+  listenerId?: string;
+  email?: string;
+  phone?: string;
+  rank?: string;
+  position?: string;
+  unit?: string;
   isEnabled?: boolean;
 }) {
   return {
     username: input.username.trim(),
     password: input.password.trim(),
     display_name: input.displayName.trim(),
+    role: input.role ?? "admin",
+    listener_id: input.listenerId?.trim() ?? "",
+    email: input.email?.trim() ?? "",
+    phone: input.phone?.trim() ?? "",
+    rank: input.rank?.trim() ?? "",
+    position: input.position?.trim() ?? "",
+    unit: input.unit?.trim() ?? "",
     is_enabled: input.isEnabled ?? true,
     updated_at: formatDateTime(),
   } satisfies ManagedAdminAccount;

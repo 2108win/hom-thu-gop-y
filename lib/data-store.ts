@@ -9,10 +9,13 @@ export const isStoreConfigError = (error: unknown) =>
   supabaseStore.isSupabaseConfigError(error);
 
 export const authenticateAdminAccount = supabaseStore.authenticateAdminAccount;
+export const getAdminAccounts = supabaseStore.getAdminAccounts;
 export const getAdminAccount = supabaseStore.getAdminAccount;
+export const appendAdminAccount = supabaseStore.appendAdminAccount;
 export const patchAdminAccount = supabaseStore.patchAdminAccount;
 
 export const getTickets = supabaseStore.getTickets;
+export const getTicketsForCategories = supabaseStore.getTicketsForCategories;
 export const appendTicket = supabaseStore.appendTicket;
 export const findTicket = supabaseStore.findTicket;
 export const createUniqueTicketCode = supabaseStore.createUniqueTicketCode;
@@ -36,3 +39,8 @@ export const getManagedListeners = supabaseStore.getManagedListeners;
 export const appendManagedListener = supabaseStore.appendManagedListener;
 export const patchManagedListener = supabaseStore.patchManagedListener;
 export const removeManagedListener = supabaseStore.removeManagedListener;
+
+export const upsertPushSubscription = supabaseStore.upsertPushSubscription;
+export const removePushSubscription = supabaseStore.removePushSubscription;
+export const getPushSubscriptionsForCategory =
+  supabaseStore.getPushSubscriptionsForCategory;

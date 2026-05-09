@@ -1,11 +1,13 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { adminCookieName, isValidAdminSession } from "@/lib/admin-auth";
+import { adminCookieName, getAdminSession } from "@/lib/admin-auth";
 import { badRequest, jsonError } from "@/lib/api-utils";
 import { createManagedListener } from "@/lib/data-models";
 import {
   appendManagedListener,
+  getAdminAccount,
+  getAdminAccounts,
   getManagedListeners,
 } from "@/lib/data-store";
 import { createEntityId } from "@/lib/server-codes";
@@ -16,7 +18,13 @@ export const dynamic = "force-dynamic";
 
 async function requireAdmin() {
   const cookieStore = await cookies();
-  return isValidAdminSession(cookieStore.get(adminCookieName)?.value);
+  const session = getAdminSession(cookieStore.get(adminCookieName)?.value);
+  if (!session) {
+    return false;
+  }
+
+  const account = await getAdminAccount(session.user);
+  return Boolean(account?.is_enabled && account.role === "admin");
 }
 
 function cleanAssignedCategories(value: unknown) {
@@ -39,8 +47,23 @@ export async function GET() {
   }
 
   try {
-    const listeners = await getManagedListeners();
-    return NextResponse.json({ listeners });
+    const [listeners, accounts] = await Promise.all([
+      getManagedListeners(),
+      getAdminAccounts(),
+    ]);
+    const linkedListenerIds = new Set(
+      accounts
+        .filter((account) => account.is_enabled && account.role === "listener")
+        .map((account) => account.listener_id)
+        .filter(Boolean),
+    );
+
+    return NextResponse.json({
+      listeners: listeners.map((listener) => ({
+        ...listener,
+        has_linked_account: linkedListenerIds.has(listener.id),
+      })),
+    });
   } catch (error) {
     return jsonError(error, "Không thể tải người phụ trách.");
   }

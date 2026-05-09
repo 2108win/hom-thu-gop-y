@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { badRequest, jsonError } from "@/lib/api-utils";
 import { createTicket } from "@/lib/data-models";
 import { appendTicket, createUniqueTicketCode } from "@/lib/data-store";
+import { notifyTicketCreated } from "@/lib/push-notifications";
 import { checkRateLimit, getClientRateLimitKey } from "@/lib/rate-limit";
 import { categories } from "@/lib/site-data";
 
@@ -59,6 +60,9 @@ export async function POST(request: Request) {
     });
 
     await appendTicket(ticket);
+    void notifyTicketCreated(ticket).catch((error) => {
+      console.error("Không thể gửi thông báo góp ý mới", error);
+    });
     return NextResponse.json({ ticket });
   } catch (error) {
     return jsonError(error, "Không thể gửi góp ý.");

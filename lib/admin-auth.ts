@@ -9,6 +9,8 @@ const sessionMaxAgeSeconds = 60 * 60 * 24 * 7;
 export type AdminSession = {
   user: string;
   displayName: string;
+  role: "admin" | "listener";
+  listenerId: string;
 };
 
 function getSessionSecret() {
@@ -24,11 +26,18 @@ function sign(payload: string) {
   return createHmac("sha256", getSessionSecret()).update(payload).digest("hex");
 }
 
-export function createAdminSessionValue(user: string, displayName: string) {
+export function createAdminSessionValue(input: {
+  user: string;
+  displayName: string;
+  role?: "admin" | "listener";
+  listenerId?: string;
+}) {
   const expires = Date.now() + sessionMaxAgeSeconds * 1000;
   const payload = JSON.stringify({
-    user,
-    displayName: displayName.trim() || user,
+    user: input.user,
+    displayName: input.displayName.trim() || input.user,
+    role: input.role ?? "admin",
+    listenerId: input.listenerId?.trim() ?? "",
     expires,
     version: sessionVersion,
   });
@@ -63,6 +72,8 @@ export function getAdminSession(value?: string): AdminSession | null {
     ) as {
       user?: string;
       displayName?: string;
+      role?: string;
+      listenerId?: string;
       expires?: number;
       version?: number;
     };
@@ -79,6 +90,9 @@ export function getAdminSession(value?: string): AdminSession | null {
           typeof payload.displayName === "string" && payload.displayName.trim()
             ? payload.displayName.trim()
             : payload.user,
+        role: payload.role === "listener" ? "listener" : "admin",
+        listenerId:
+          typeof payload.listenerId === "string" ? payload.listenerId.trim() : "",
       };
     }
 

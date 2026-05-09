@@ -5,6 +5,7 @@ import {
   normalizeTicketCode,
   type ManagedAdminAccount,
   type ManagedListener,
+  type ManagedPushSubscription,
   type ManagedSurvey,
   type StoredSurveyResponse,
   type StoredTicket,
@@ -39,6 +40,8 @@ type ListenerRow = ManagedListener & {
 };
 
 type AdminAccountRow = ManagedAdminAccount & { created_order?: number };
+
+type PushSubscriptionRow = ManagedPushSubscription & { created_order?: number };
 
 export class SupabaseConfigError extends Error {
   constructor(message = "Chưa cấu hình Supabase.") {
@@ -172,10 +175,19 @@ function toSurveyResponse(row: SurveyResponseRow) {
   } satisfies StoredSurveyResponse;
 }
 
-async function getAdminAccounts() {
+export async function getAdminAccounts() {
   return supabaseFetch<AdminAccountRow[]>(
     "admin_accounts?select=*&order=created_order.asc",
   );
+}
+
+export async function appendAdminAccount(account: ManagedAdminAccount) {
+  await supabaseFetch("admin_accounts", {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify(account),
+    allowEmpty: true,
+  });
 }
 
 export async function getAdminAccount(username: string) {
@@ -194,7 +206,7 @@ export async function getAdminAccount(username: string) {
 
 export async function patchAdminAccount(
   username: string,
-  patch: Partial<Pick<ManagedAdminAccount, "display_name" | "password">>,
+  patch: Partial<ManagedAdminAccount>,
 ) {
   const exactUsername = username.trim();
   if (!exactUsername) {
@@ -245,12 +257,47 @@ export async function authenticateAdminAccount(
     status: "ok" as const,
     username: account.username,
     displayName: account.display_name,
+    role: (account.role === "listener" ? "listener" : "admin") as
+      | "admin"
+      | "listener",
+    listenerId: account.listener_id ?? "",
+    email: account.email ?? "",
+    phone: account.phone ?? "",
+    rank: account.rank ?? "",
+    position: account.position ?? "",
+    unit: account.unit ?? "",
   };
 }
 
 export async function getTickets() {
   const rows = await supabaseFetch<TicketRow[]>(
     "feedback_tickets?select=*&order=created_order.desc",
+  );
+  return rows.map((row) => ({
+    ticket_code: row.ticket_code,
+    created_at: row.created_at,
+    status: row.status === "done" ? "done" : "pending",
+    message: row.message,
+    category_id: row.category_id,
+    category: row.category,
+    is_anonymous: row.is_anonymous,
+    name: row.name ?? "",
+    unit: row.unit ?? "",
+    admin_reply: row.admin_reply ?? "",
+    replied_by: row.replied_by ?? "",
+    replied_at: row.replied_at ?? "",
+    bot_reply: row.bot_reply,
+  }));
+}
+
+export async function getTicketsForCategories(categoryIds: string[]) {
+  const validIds = categoryIds.map((item) => item.trim()).filter(Boolean);
+  if (!validIds.length) {
+    return [];
+  }
+
+  const rows = await supabaseFetch<TicketRow[]>(
+    `feedback_tickets?select=*&category_id=in.(${validIds.map(encodeURIComponent).join(",")})&order=created_order.desc`,
   );
   return rows.map((row) => ({
     ticket_code: row.ticket_code,
@@ -489,4 +536,36 @@ export async function removeManagedListener(id: string) {
     allowEmpty: true,
   });
   return true;
+}
+
+export async function upsertPushSubscription(
+  subscription: ManagedPushSubscription,
+) {
+  const rows = await supabaseFetch<PushSubscriptionRow[]>(
+    `push_subscriptions?on_conflict=endpoint`,
+    {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify(subscription),
+    },
+  );
+  return rows[0] ?? null;
+}
+
+export async function removePushSubscription(endpoint: string) {
+  await supabaseFetch(
+    `push_subscriptions?${eqFilter("endpoint", endpoint)}`,
+    {
+      method: "DELETE",
+      headers: { Prefer: "return=minimal" },
+      allowEmpty: true,
+    },
+  );
+}
+
+export async function getPushSubscriptionsForCategory(categoryId: string) {
+  const rows = await supabaseFetch<PushSubscriptionRow[]>(
+    `push_subscriptions?select=*,managed_listeners!inner(assigned_categories,is_enabled)&managed_listeners.is_enabled=eq.true&managed_listeners.assigned_categories=cs.{${encodeURIComponent(categoryId)}}`,
+  );
+  return rows satisfies ManagedPushSubscription[];
 }

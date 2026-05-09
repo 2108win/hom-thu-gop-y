@@ -1,24 +1,28 @@
-"use client";
+﻿"use client";
 
 import {
   ArrowDown,
   ArrowUp,
+  Bell,
+  BadgeCheck,
   Headphones,
   LoaderCircle,
+  Pencil,
   Phone,
   Plus,
   RefreshCcw,
   Save,
   Trash2,
+  X,
 } from "lucide-react";
-import type { Dispatch, FormEvent, SetStateAction } from "react";
+import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
 
 import type {
   DeleteConfirm,
   IsActionPending,
   ListenerDraft,
-  ListenerPatch,
 } from "@/components/admin/types";
+import { categoryTone } from "@/components/admin/utils";
 import type { ManagedListener } from "@/lib/data-models";
 import { categories } from "@/lib/site-data";
 
@@ -28,11 +32,10 @@ type ListenersTabProps = {
   isActionPending: IsActionPending;
   setListenerDraft: Dispatch<SetStateAction<ListenerDraft>>;
   onCreateListener: (event: FormEvent<HTMLFormElement>) => void;
-  onPatchDraft: (listenerId: string, patch: ListenerPatch) => void;
-  onSave: (listener: ManagedListener, actionKey?: string) => void;
+  onSave: (listener: ManagedListener, actionKey?: string) => Promise<boolean>;
   onMove: (listenerId: string, direction: "up" | "down") => void;
-  onToggleCategory: (listenerId: string, categoryId: string) => void;
   onToggleDraftCategory: (categoryId: string) => void;
+  onEnablePush: (listener: ManagedListener) => void;
   onDeleteRequest: (target: DeleteConfirm) => void;
 };
 
@@ -42,13 +45,23 @@ export function ListenersTab({
   isActionPending,
   setListenerDraft,
   onCreateListener,
-  onPatchDraft,
   onSave,
   onMove,
-  onToggleCategory,
   onToggleDraftCategory,
+  onEnablePush,
   onDeleteRequest,
 }: ListenersTabProps) {
+  const [editingListenerDraft, setEditingListenerDraft] =
+    useState<ManagedListener | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const editingListener = editingListenerDraft;
+  const filteredListeners =
+    categoryFilter === "all"
+      ? listeners
+      : listeners.filter((listener) =>
+          listener.assigned_categories.includes(categoryFilter),
+        );
+
   return (
     <section className="space-y-4">
       <form
@@ -137,10 +150,8 @@ export function ListenersTab({
               >
                 <input
                   type="checkbox"
-                  className="checkbox checkbox-primary size-4 border border-gray-300 outline-none"
-                  checked={listenerDraft.assigned_categories.includes(
-                    category.id,
-                  )}
+                  className="checkbox checkbox-primary size-4 outline-none"
+                  checked={listenerDraft.assigned_categories.includes(category.id)}
                   onChange={() => onToggleDraftCategory(category.id)}
                 />
                 {category.name}
@@ -165,8 +176,9 @@ export function ListenersTab({
         </label>
 
         <button
+          type="submit"
           disabled={isActionPending("listener:create")}
-          className="btn btn-primary focus-lift mt-3 w-full px-4 text-sm font-semibold uppercase sm:w-auto"
+          className="btn btn-primary mt-3 focus-lift gap-2 px-4 text-sm font-semibold uppercase"
         >
           {isActionPending("listener:create") ? (
             <LoaderCircle className="size-4 animate-spin" />
@@ -179,12 +191,49 @@ export function ListenersTab({
         </button>
       </form>
 
-      {listeners.length === 0 ? (
+      <div className="shine-card border-border border bg-white p-3 shadow-sm">
+        <p className="text-muted-foreground/70 mb-2 text-xs font-semibold tracking-[0.12em] uppercase">
+          Lọc theo nhóm nội dung phụ trách
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setCategoryFilter("all")}
+            className={`btn btn-sm px-3 text-xs font-semibold uppercase ${
+              categoryFilter === "all" ? "btn-primary" : "btn-outline"
+            }`}
+          >
+            Tất cả ({listeners.length})
+          </button>
+          {categories.map((category) => {
+            const count = listeners.filter((listener) =>
+              listener.assigned_categories.includes(category.id),
+            ).length;
+
+            return (
+              <button
+                key={category.id}
+                type="button"
+                onClick={() => setCategoryFilter(category.id)}
+                className={`btn btn-sm border px-3 text-xs font-semibold uppercase ${
+                  categoryFilter === category.id
+                    ? categoryTone(category.id)
+                    : "btn-outline"
+                }`}
+              >
+                {category.name} ({count})
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {filteredListeners.length === 0 ? (
         <p className="shine-card text-muted-foreground/70 p-6 text-center text-sm font-bold">
-          Chưa có người phụ trách nào.
+          Chưa có người phụ trách phù hợp.
         </p>
       ) : (
-        listeners.map((listener, index) => (
+        filteredListeners.map((listener, index) => (
           <article
             key={listener.id}
             className="shine-card focus-lift border-border border bg-white p-4 shadow-sm"
@@ -215,7 +264,7 @@ export function ListenersTab({
                     aria-label="Đưa người phụ trách xuống một vị trí"
                     onClick={() => onMove(listener.id, "down")}
                     disabled={
-                      index === listeners.length - 1 ||
+                      index === filteredListeners.length - 1 ||
                       isActionPending(`listener:${listener.id}:move`)
                     }
                     className="btn btn-square btn-outline btn-sm focus-lift border-border bg-white"
@@ -243,68 +292,22 @@ export function ListenersTab({
               <div className="flex flex-wrap items-center gap-2">
                 <strong className="text-foreground block text-base font-semibold">
                   {listener.rank} {listener.fullname}
+                  {listener.has_linked_account ? (
+                    <BadgeCheck className="ml-1 inline size-4 align-[-2px] text-blue-600" />
+                  ) : null}
                 </strong>
-                <span className="text-muted-foreground/70 sr-only font-mono text-[11px] font-bold uppercase">
-                  {listener.id}
-                </span>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="floating-label">
-                <span>Họ tên người phụ trách</span>
-                <input
-                  value={listener.fullname}
-                  onChange={(event) =>
-                    onPatchDraft(listener.id, {
-                      fullname: event.target.value,
-                    })
-                  }
-                  placeholder="Họ tên người phụ trách"
-                  className="input bg-muted focus:border-primary h-10 w-full border text-sm font-bold outline-none"
-                />
-              </label>
-              <label className="floating-label">
-                <span>Số điện thoại</span>
-                <input
-                  value={listener.phone}
-                  onChange={(event) =>
-                    onPatchDraft(listener.id, {
-                      phone: event.target.value,
-                    })
-                  }
-                  placeholder="Số điện thoại"
-                  className="input bg-muted focus:border-primary h-10 w-full border text-sm outline-none"
-                />
-              </label>
-              <label className="floating-label sm:col-span-2">
-                <span>Chức danh/cấp bậc</span>
-                <input
-                  value={listener.rank}
-                  onChange={(event) =>
-                    onPatchDraft(listener.id, {
-                      rank: event.target.value,
-                    })
-                  }
-                  placeholder="Chức danh/cấp bậc"
-                  className="input bg-muted focus:border-primary h-10 w-full border text-sm outline-none"
-                />
-              </label>
-
-              <label className="floating-label sm:col-span-2">
-                <span>Chức vụ/nhiệm vụ phụ trách</span>
-                <textarea
-                  value={listener.position}
-                  onChange={(event) =>
-                    onPatchDraft(listener.id, {
-                      position: event.target.value,
-                    })
-                  }
-                  rows={3}
-                  placeholder="Chức vụ/nhiệm vụ phụ trách"
-                  className="textarea bg-muted focus:border-primary min-h-24 w-full border text-sm outline-none"
-                />
-              </label>
+            <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+              <div className="rounded-box bg-muted p-3">
+                <p className="text-muted-foreground/70 text-[10px] font-semibold uppercase">Số điện thoại</p>
+                <p className="font-bold">{listener.phone || "-"}</p>
+              </div>
+              <div className="rounded-box bg-muted p-3">
+                <p className="text-muted-foreground/70 text-[10px] font-semibold uppercase">Chức vụ/nhiệm vụ</p>
+                <p className="line-clamp-3 font-bold whitespace-pre-wrap">{listener.position || "-"}</p>
+              </div>
             </div>
 
             <div className="border-border/60 rounded-box bg-muted mt-3 border p-3">
@@ -312,56 +315,37 @@ export function ListenersTab({
                 Nhóm nội dung phụ trách
               </p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {categories.map((category) => (
-                  <label
-                    key={category.id}
-                    className="text-foreground/85 rounded-field flex items-center gap-2 bg-white p-3 text-xs font-bold"
-                  >
-                    <input
-                      type="checkbox"
-                      className="checkbox checkbox-primary size-4 outline-none"
-                      checked={listener.assigned_categories.includes(
-                        category.id,
-                      )}
-                      onChange={() =>
-                        onToggleCategory(listener.id, category.id)
-                      }
-                    />
-                    {category.name}
-                  </label>
-                ))}
+                {categories.map((category) => {
+                  const checked = listener.assigned_categories.includes(category.id);
+                  return (
+                    <span
+                      key={category.id}
+                    className={`rounded-field border p-2 text-xs font-bold ${
+                      checked
+                        ? categoryTone(category.id)
+                        : "border-transparent bg-white/50 text-muted-foreground/70"
+                    }`}
+                    >
+                      {category.name}
+                    </span>
+                  );
+                })}
               </div>
             </div>
 
-            <label className="text-foreground/85 mt-3 flex items-center gap-2 text-sm font-bold">
-              <input
-                type="checkbox"
-                className="checkbox checkbox-primary checkbox-xs border border-gray-300 outline-none"
-                checked={listener.is_enabled}
-                onChange={(event) =>
-                  onPatchDraft(listener.id, {
-                    is_enabled: event.target.checked,
-                  })
-                }
-              />
-              Bật hiển thị trên trang góp ý
-            </label>
-
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
               <button
                 type="button"
-                onClick={() => onSave(listener)}
-                disabled={isActionPending(`listener:${listener.id}:save`)}
+                onClick={() => {
+                  setEditingListenerDraft({
+                    ...listener,
+                    assigned_categories: [...listener.assigned_categories],
+                  });
+                }}
                 className="btn btn-primary btn-sm focus-lift px-3 text-xs font-semibold uppercase"
               >
-                {isActionPending(`listener:${listener.id}:save`) ? (
-                  <LoaderCircle className="size-4 animate-spin" />
-                ) : (
-                  <Save className="size-4" />
-                )}
-                {isActionPending(`listener:${listener.id}:save`)
-                  ? "Đang lưu"
-                  : "Lưu"}
+                <Pencil className="size-4" />
+                Chỉnh sửa
               </button>
               <button
                 type="button"
@@ -397,6 +381,19 @@ export function ListenersTab({
               </a>
               <button
                 type="button"
+                onClick={() => onEnablePush(listener)}
+                disabled={isActionPending(`listener:${listener.id}:push`)}
+                className="btn btn-outline btn-sm focus-lift border-sky-100 bg-sky-50 px-3 text-xs font-semibold text-sky-700 uppercase hover:bg-sky-100"
+              >
+                {isActionPending(`listener:${listener.id}:push`) ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : (
+                  <Bell className="size-4" />
+                )}
+                Thông báo
+              </button>
+              <button
+                type="button"
                 onClick={() =>
                   onDeleteRequest({
                     kind: "listener",
@@ -412,6 +409,171 @@ export function ListenersTab({
             </div>
           </article>
         ))
+      )}
+
+      {editingListener && (
+        <dialog open className="modal modal-open">
+          <div className="modal-box border-border bg-base-100 max-h-[90vh] max-w-3xl overflow-y-auto border p-0 shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-base-300 bg-base-100 px-4 py-3">
+              <h3 className="text-sm font-semibold uppercase">Chỉnh sửa người phụ trách</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingListenerDraft(null);
+                }}
+                className="btn btn-sm btn-circle btn-ghost"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 p-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="floating-label">
+                  <span>Họ tên</span>
+                  <input
+                    value={editingListener.fullname}
+                    onChange={(event) =>
+                      setEditingListenerDraft((current) =>
+                        current
+                          ? { ...current, fullname: event.target.value }
+                          : current,
+                      )
+                    }
+                    className="input bg-muted focus:border-primary h-10 w-full border text-sm outline-none"
+                  />
+                </label>
+                <label className="floating-label">
+                  <span>Số điện thoại</span>
+                  <input
+                    value={editingListener.phone}
+                    onChange={(event) =>
+                      setEditingListenerDraft((current) =>
+                        current ? { ...current, phone: event.target.value } : current,
+                      )
+                    }
+                    className="input bg-muted focus:border-primary h-10 w-full border text-sm outline-none"
+                  />
+                </label>
+                <label className="floating-label sm:col-span-2">
+                  <span>Cấp bậc/chức danh</span>
+                  <input
+                    value={editingListener.rank}
+                    onChange={(event) =>
+                      setEditingListenerDraft((current) =>
+                        current ? { ...current, rank: event.target.value } : current,
+                      )
+                    }
+                    className="input bg-muted focus:border-primary h-10 w-full border text-sm outline-none"
+                  />
+                </label>
+                <label className="floating-label sm:col-span-2">
+                  <span>Chức vụ/nhiệm vụ</span>
+                  <textarea
+                    value={editingListener.position}
+                    onChange={(event) =>
+                      setEditingListenerDraft((current) =>
+                        current
+                          ? { ...current, position: event.target.value }
+                          : current,
+                      )
+                    }
+                    rows={3}
+                    className="textarea bg-muted focus:border-primary min-h-24 w-full border text-sm outline-none"
+                  />
+                </label>
+              </div>
+
+              <div className="border-border/60 rounded-box bg-muted border p-3">
+                <p className="text-muted-foreground/70 mb-2 text-xs font-semibold tracking-[0.12em] uppercase">
+                  Nhóm nội dung phụ trách (chỉ Admin chỉnh sửa)
+                </p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {categories.map((category) => (
+                    <label
+                      key={category.id}
+                          className={`rounded-field flex items-center gap-2 border p-3 text-xs font-bold ${categoryTone(category.id)}`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="checkbox checkbox-primary size-4 outline-none"
+                        checked={editingListener.assigned_categories.includes(category.id)}
+                        onChange={() =>
+                          setEditingListenerDraft((current) => {
+                            if (!current) {
+                              return current;
+                            }
+
+                            const assigned = current.assigned_categories.includes(
+                              category.id,
+                            )
+                              ? current.assigned_categories.filter(
+                                  (item) => item !== category.id,
+                                )
+                              : [...current.assigned_categories, category.id];
+
+                            return { ...current, assigned_categories: assigned };
+                          })
+                        }
+                      />
+                      {category.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <label className="text-foreground/85 flex items-center gap-2 text-sm font-bold">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-primary checkbox-xs border border-gray-300 outline-none"
+                  checked={editingListener.is_enabled}
+                  onChange={(event) =>
+                    setEditingListenerDraft((current) =>
+                      current
+                        ? { ...current, is_enabled: event.target.checked }
+                        : current,
+                    )
+                  }
+                />
+                Bật hiển thị trên trang góp ý
+              </label>
+            </div>
+
+            <div className="sticky bottom-0 flex justify-end gap-2 border-t border-base-300 bg-base-100 px-4 py-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingListenerDraft(null);
+                }}
+                className="btn btn-outline btn-sm px-4 text-xs font-semibold uppercase"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void onSave(
+                    editingListener,
+                    `listener:${editingListener.id}:save`,
+                  ).then((saved) => {
+                    if (saved) {
+                      setEditingListenerDraft(null);
+                    }
+                  });
+                }}
+                disabled={isActionPending(`listener:${editingListener.id}:save`)}
+                className="btn btn-primary btn-sm px-4 text-xs font-semibold uppercase"
+              >
+                {isActionPending(`listener:${editingListener.id}:save`) ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : (
+                  <Save className="size-4" />
+                )}
+                Lưu thay đổi
+              </button>
+            </div>
+          </div>
+        </dialog>
       )}
     </section>
   );

@@ -15,16 +15,20 @@ import type {
   StatusFilter,
   TicketPatch,
 } from "@/components/admin/types";
-import { formatNow } from "@/components/admin/utils";
+import { categoryTone, formatNow } from "@/components/admin/utils";
 import type { StoredTicket } from "@/lib/data-models";
+import { categories } from "@/lib/site-data";
 
 type TicketsTabProps = {
   tickets: StoredTicket[];
   query: string;
   statusFilter: StatusFilter;
+  categoryFilter: string;
+  allowedCategoryIds?: string[];
   isActionPending: IsActionPending;
   onQueryChange: (value: string) => void;
   onStatusFilterChange: (value: StatusFilter) => void;
+  onCategoryFilterChange: (value: string) => void;
   onPatchDraft: (ticketCode: string, patch: TicketPatch) => void;
   onSaveReply: (ticketCode: string) => void;
   onSavePatch: (
@@ -39,17 +43,32 @@ export function TicketsTab({
   tickets,
   query,
   statusFilter,
+  categoryFilter,
+  allowedCategoryIds = [],
   isActionPending,
   onQueryChange,
   onStatusFilterChange,
+  onCategoryFilterChange,
   onPatchDraft,
   onSaveReply,
   onSavePatch,
   onDeleteRequest,
 }: TicketsTabProps) {
+  const isRestrictedCategories = allowedCategoryIds.length > 0;
+  const categoryOptions = categories.filter(
+    (category) =>
+      !isRestrictedCategories || allowedCategoryIds.includes(category.id),
+  );
+
   return (
     <>
-      <section className="shine-card mb-3 grid grid-cols-1 gap-2 p-3 shadow-sm sm:grid-cols-[1fr_auto]">
+      <section
+        className={`shine-card mb-3 grid grid-cols-1 gap-2 p-3 shadow-sm ${
+          categoryOptions.length > 1
+            ? "sm:grid-cols-[1fr_auto_auto]"
+            : "sm:grid-cols-[1fr_auto]"
+        }`}
+      >
         <label className="floating-label relative">
           <span className="[inset-inline-start:2.5rem]">Tìm kiếm</span>
           <Search className="text-muted-foreground/70 pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2" />
@@ -71,6 +90,20 @@ export function TicketsTab({
           <option value="pending">Đang chờ</option>
           <option value="done">Đã xử lý</option>
         </select>
+        {categoryOptions.length > 1 && (
+          <select
+            value={categoryFilter}
+            onChange={(event) => onCategoryFilterChange(event.target.value)}
+            className="select bg-base-100 h-10 w-full border text-sm font-medium outline-none sm:w-56"
+          >
+            <option value="all">Tất cả nhóm nội dung</option>
+            {categoryOptions.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        )}
       </section>
 
       <section className="space-y-3">
@@ -109,7 +142,9 @@ export function TicketsTab({
                   <p className="text-muted-foreground/70 mb-1 text-[10px] font-semibold tracking-[0.12em] uppercase">
                     Nhóm
                   </p>
-                  <p className="text-foreground/85 font-bold">
+                  <p
+                    className={`rounded-field inline-flex border px-2 py-1 text-xs font-bold ${categoryTone(ticket.category_id)}`}
+                  >
                     {ticket.category || "Chưa phân loại"}
                   </p>
                 </div>
