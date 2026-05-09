@@ -69,6 +69,32 @@ function urlBase64ToUint8Array(base64String: string) {
   return outputArray;
 }
 
+function arrayBufferToUrlBase64(buffer: ArrayBuffer | null) {
+  if (!buffer) {
+    return "";
+  }
+
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return window
+    .btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+function subscriptionUsesVapidKey(
+  subscription: PushSubscription,
+  publicKey: string,
+) {
+  return arrayBufferToUrlBase64(subscription.options.applicationServerKey) === publicKey;
+}
+
 function sortListeners(listeners: ManagedListener[]) {
   return [...listeners].sort((a, b) => a.order - b.order);
 }
@@ -98,6 +124,8 @@ export function AdminLogin() {
   const [copiedQrId, setCopiedQrId] = useState("");
   const [copyingQrId, setCopyingQrId] = useState("");
   const [qrCopyErrorId, setQrCopyErrorId] = useState("");
+  const [currentDevicePushEnabled, setCurrentDevicePushEnabled] =
+    useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirm | null>(
     null,
   );
@@ -122,7 +150,19 @@ export function AdminLogin() {
     setTickets([]);
     setManagedSurveys([]);
     setManagedListeners([]);
+    setCurrentDevicePushEnabled(false);
   }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      return;
+    }
+
+    void navigator.serviceWorker.ready
+      .then((registration) => registration.pushManager.getSubscription())
+      .then((subscription) => setCurrentDevicePushEnabled(Boolean(subscription)))
+      .catch(() => setCurrentDevicePushEnabled(false));
+  }, [isLoggedIn]);
 
   const isActionPending = (key: string) => pendingActions.includes(key);
 
@@ -693,6 +733,8 @@ export function AdminLogin() {
 
   const enablePushForListener = async (listener?: ManagedListener) => {
     const listenerId = listener?.id ?? adminProfile?.listenerId ?? "";
+    let enabled = false;
+
     await runWithActionLoading(`listener:${listenerId || "self"}:push`, async () => {
       if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
         toast.error("Trình duyệt này chưa hỗ trợ thông báo web.");
@@ -724,10 +766,14 @@ export function AdminLogin() {
           return;
         }
 
-        const existingSubscription =
-          await registration.pushManager.getSubscription();
-        const subscription =
-          existingSubscription ??
+        let subscription = await registration.pushManager.getSubscription();
+        if (subscription && !subscriptionUsesVapidKey(subscription, publicKey)) {
+          await subscription.unsubscribe();
+          subscription = null;
+        }
+
+        subscription =
+          subscription ??
           (await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(publicKey),
@@ -752,12 +798,61 @@ export function AdminLogin() {
             : "Thiết bị này sẽ nhận thông báo cho tài khoản của bạn.",
           { id: toastId },
         );
+        enabled = true;
+        setCurrentDevicePushEnabled(true);
       } catch (error) {
         toast.error(errorMessage(error, "Không thể bật thông báo."), {
           id: toastId,
         });
       }
     });
+
+    return enabled;
+  };
+
+  const disablePushForCurrentDevice = async () => {
+    const listenerId = adminProfile?.listenerId ?? "";
+    let disabled = false;
+
+    await runWithActionLoading(`listener:${listenerId || "self"}:push`, async () => {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        toast.error("Trình duyệt này chưa hỗ trợ thông báo web.");
+        return;
+      }
+
+      const toastId = toast.loading("Đang tắt thông báo trên thiết bị...");
+
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+
+        if (subscription) {
+          const response = await fetch("/api/admin/push-subscriptions", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              endpoint: subscription.endpoint,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(await readErrorMessage(response));
+          }
+
+          await subscription.unsubscribe();
+        }
+
+        toast.success("Đã tắt thông báo trên thiết bị này.", { id: toastId });
+        disabled = true;
+        setCurrentDevicePushEnabled(false);
+      } catch (error) {
+        toast.error(errorMessage(error, "Không thể tắt thông báo."), {
+          id: toastId,
+        });
+      }
+    });
+
+    return disabled;
   };
 
   const handleLogout = async () => {
@@ -907,7 +1002,7 @@ export function AdminLogin() {
           onChange={setActiveTab}
         />
 
-        {adminProfile?.role === "listener" && (
+        {adminProfile?.role === "listener" && !currentDevicePushEnabled && (
           <div className="rounded-box border-border mb-4 flex flex-col gap-3 border bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-foreground text-sm font-bold uppercase">
@@ -992,6 +1087,11 @@ export function AdminLogin() {
             profile={adminProfile}
             listeners={managedListeners}
             onProfileChange={setAdminProfile}
+            onEnablePush={() => enablePushForListener()}
+            onDisablePush={disablePushForCurrentDevice}
+            pushActionPending={isActionPending(
+              `listener:${adminProfile.listenerId || "self"}:push`,
+            )}
             onLinkedDataChange={() =>
               loadData(undefined, adminProfile.role)
             }

@@ -176,13 +176,32 @@ for each row execute function public.prevent_deleting_linked_listener();
 create table if not exists public.push_subscriptions (
   created_order bigserial primary key,
   endpoint text not null unique,
-  listener_id text not null references public.managed_listeners(id) on delete cascade,
+  listener_id text references public.managed_listeners(id) on delete cascade,
+  account_username text,
   p256dh text not null,
   auth text not null,
   user_agent text default '',
   created_at timestamptz not null,
   updated_at timestamptz not null
 );
+
+alter table public.push_subscriptions
+  add column if not exists account_username text;
+alter table public.push_subscriptions
+  alter column listener_id drop not null;
+update public.push_subscriptions
+set account_username = listener_id
+where account_username is null and listener_id is not null;
+update public.push_subscriptions as subscription
+set account_username = account.username
+from public.admin_accounts as account
+where subscription.account_username = subscription.listener_id
+  and account.listener_id = subscription.listener_id;
+alter table public.push_subscriptions
+  drop constraint if exists push_subscriptions_account_username_fkey;
+alter table public.push_subscriptions
+  add constraint push_subscriptions_account_username_fkey
+  foreign key (account_username) references public.admin_accounts(username) on delete cascade;
 
 update public.feedback_tickets set replied_at = null where replied_at::text = '';
 
@@ -243,3 +262,5 @@ create unique index if not exists admin_accounts_listener_id_unique_idx
   where listener_id <> '';
 create index if not exists push_subscriptions_listener_id_idx
   on public.push_subscriptions (listener_id);
+create index if not exists push_subscriptions_account_username_idx
+  on public.push_subscriptions (account_username);

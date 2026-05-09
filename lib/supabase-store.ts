@@ -564,8 +564,23 @@ export async function removePushSubscription(endpoint: string) {
 }
 
 export async function getPushSubscriptionsForCategory(categoryId: string) {
-  const rows = await supabaseFetch<PushSubscriptionRow[]>(
+  const listenerRows = await supabaseFetch<PushSubscriptionRow[]>(
     `push_subscriptions?select=*,managed_listeners!inner(assigned_categories,is_enabled)&managed_listeners.is_enabled=eq.true&managed_listeners.assigned_categories=cs.{${encodeURIComponent(categoryId)}}`,
   );
-  return rows satisfies ManagedPushSubscription[];
+  const adminAccounts = await getAdminAccounts();
+  const adminUsernames = adminAccounts
+    .filter((account) => account.role === "admin" && account.is_enabled)
+    .map((account) => account.username);
+  const adminRows = adminUsernames.length
+    ? await supabaseFetch<PushSubscriptionRow[]>(
+        `push_subscriptions?select=*&account_username=in.(${adminUsernames.map(encodeURIComponent).join(",")})`,
+      )
+    : [];
+  const subscriptions = new Map<string, PushSubscriptionRow>();
+
+  for (const subscription of [...listenerRows, ...adminRows]) {
+    subscriptions.set(subscription.endpoint, subscription);
+  }
+
+  return [...subscriptions.values()] satisfies ManagedPushSubscription[];
 }

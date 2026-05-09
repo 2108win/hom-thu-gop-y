@@ -64,7 +64,8 @@ export type PushSubscriptionKeys = {
 
 export type ManagedPushSubscription = {
   endpoint: string;
-  listener_id: string;
+  listener_id: string | null;
+  account_username: string | null;
   p256dh: string;
   auth: string;
   user_agent: string;

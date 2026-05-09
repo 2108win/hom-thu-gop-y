@@ -1,6 +1,8 @@
 ﻿"use client";
 
 import {
+  Bell,
+  BellOff,
   KeyRound,
   LoaderCircle,
   Pencil,
@@ -21,6 +23,9 @@ type AccountTabProps = {
   profile: AdminProfile;
   listeners?: ManagedListener[];
   onProfileChange: (profile: AdminProfile) => void;
+  onEnablePush: () => Promise<boolean>;
+  onDisablePush: () => Promise<boolean>;
+  pushActionPending: boolean;
   onLinkedDataChange?: () => Promise<void>;
   onUnauthorized: () => void;
 };
@@ -59,10 +64,21 @@ const emptyEditDraft = {
   isEnabled: true,
 };
 
+function browserSupportsPush() {
+  return (
+    typeof navigator !== "undefined" &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window
+  );
+}
+
 export function AccountTab({
   profile,
   listeners = [],
   onProfileChange,
+  onEnablePush,
+  onDisablePush,
+  pushActionPending,
   onLinkedDataChange,
   onUnauthorized,
 }: AccountTabProps) {
@@ -79,6 +95,8 @@ export function AccountTab({
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [accounts, setAccounts] = useState<ManagedAccount[]>([]);
+  const [pushSupported] = useState(browserSupportsPush);
+  const [pushEnabled, setPushEnabled] = useState(false);
   const [accountDraft, setAccountDraft] = useState({
     username: "",
     password: "",
@@ -149,6 +167,31 @@ export function AccountTab({
 
     return () => window.clearTimeout(timeoutId);
   }, [loadAccounts]);
+
+  useEffect(() => {
+    if (!pushSupported) {
+      return;
+    }
+
+    void navigator.serviceWorker.ready
+      .then((registration) => registration.pushManager.getSubscription())
+      .then((subscription) => setPushEnabled(Boolean(subscription)))
+      .catch(() => setPushEnabled(false));
+  }, [pushSupported]);
+
+  const enablePush = async () => {
+    const enabled = await onEnablePush();
+    if (enabled) {
+      setPushEnabled(true);
+    }
+  };
+
+  const disablePush = async () => {
+    const disabled = await onDisablePush();
+    if (disabled) {
+      setPushEnabled(false);
+    }
+  };
 
   const createAccount = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -475,6 +518,48 @@ export function AccountTab({
               </p>
             </div>
           )}
+
+          <div className="border-border/60 rounded-box bg-muted border p-3 md:col-span-2">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-muted-foreground/70 mb-1 text-xs font-semibold tracking-[0.12em] uppercase">
+                  Thông báo thiết bị
+                </p>
+                <p className="text-sm font-bold">
+                  {pushEnabled
+                    ? "Thiết bị này đang nhận thông báo."
+                    : "Thiết bị này chưa bật thông báo."}
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs font-semibold">
+                  {profile.role === "admin"
+                    ? "Admin nhận tất cả góp ý mới trên thiết bị hiện tại."
+                    : "Người lắng nghe chỉ nhận góp ý thuộc nhóm nội dung phụ trách trên thiết bị hiện tại."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void (pushEnabled ? disablePush() : enablePush())}
+                disabled={!pushSupported || pushActionPending}
+                className={`btn btn-sm focus-lift px-4 text-xs font-semibold uppercase ${
+                  pushEnabled ? "btn-outline" : "btn-primary"
+                }`}
+              >
+                {pushActionPending ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : pushEnabled ? (
+                  <BellOff className="size-4" />
+                ) : (
+                  <Bell className="size-4" />
+                )}
+                {pushEnabled ? "Tắt thông báo" : "Bật thông báo"}
+              </button>
+            </div>
+            {!pushSupported && (
+              <p className="mt-2 rounded-field border border-amber-100 bg-amber-50 p-2 text-xs font-semibold text-amber-700">
+                Trình duyệt này chưa hỗ trợ thông báo web.
+              </p>
+            )}
+          </div>
 
           <div className="md:col-span-2">
             <div className="gold-divider my-1" />

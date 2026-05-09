@@ -86,7 +86,7 @@ export async function notifyTicketCreated(ticket: StoredTicket) {
             ? Number((error as { statusCode?: unknown }).statusCode)
             : 0;
 
-        if (statusCode === 404 || statusCode === 410) {
+        if (statusCode === 403 || statusCode === 404 || statusCode === 410) {
           await removePushSubscription(subscription.endpoint);
         } else {
           console.error("Không thể gửi Web Push notification", error);

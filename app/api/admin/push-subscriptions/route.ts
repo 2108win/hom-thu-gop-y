@@ -55,32 +55,35 @@ export async function POST(request: Request) {
     const p256dh = String(body.subscription?.keys?.p256dh ?? "").trim();
     const auth = String(body.subscription?.keys?.auth ?? "").trim();
 
-    if (!listenerId) {
+    if (account.role === "listener" && !listenerId) {
       return badRequest("Tài khoản chưa liên kết người phụ trách nhận thông báo.");
     }
     if (!endpoint || !p256dh || !auth) {
       return badRequest("Thiếu thông tin đăng ký thông báo của thiết bị.");
     }
 
-    const listeners = await getManagedListeners();
-    const listener = listeners.find((item) => item.id === listenerId);
-    if (!listener) {
-      return NextResponse.json(
-        { message: "Không tìm thấy người phụ trách." },
-        { status: 404 },
-      );
-    }
-    if (!listener.is_enabled) {
-      return badRequest("Người phụ trách này đang tắt hiển thị.");
-    }
-    if (!listener.assigned_categories.length) {
-      return badRequest("Người phụ trách chưa có nhóm nội dung phụ trách.");
+    if (listenerId) {
+      const listeners = await getManagedListeners();
+      const listener = listeners.find((item) => item.id === listenerId);
+      if (!listener) {
+        return NextResponse.json(
+          { message: "Không tìm thấy người phụ trách." },
+          { status: 404 },
+        );
+      }
+      if (!listener.is_enabled) {
+        return badRequest("Người phụ trách này đang tắt hiển thị.");
+      }
+      if (!listener.assigned_categories.length) {
+        return badRequest("Người phụ trách chưa có nhóm nội dung phụ trách.");
+      }
     }
 
     const now = new Date().toISOString();
     const subscription = await upsertPushSubscription({
       endpoint,
-      listener_id: listenerId,
+      listener_id: listenerId || null,
+      account_username: account.username,
       p256dh,
       auth,
       user_agent: request.headers.get("user-agent") ?? "",
