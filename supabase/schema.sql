@@ -112,7 +112,10 @@ alter table public.admin_accounts
 alter table public.admin_accounts
   add constraint admin_accounts_listener_role_check check (
     (role = 'admin' and coalesce(listener_id, '') = '')
-    or (role = 'listener' and coalesce(listener_id, '') <> '')
+    or (
+      role = 'listener'
+      and (coalesce(listener_id, '') <> '' or is_enabled = false)
+    )
   );
 
 alter table public.managed_listeners
@@ -132,7 +135,7 @@ returns trigger
 language plpgsql
 as $$
 begin
-  if new.role = 'listener' then
+  if new.role = 'listener' and coalesce(new.listener_id, '') <> '' then
     if not exists (
       select 1
       from public.managed_listeners

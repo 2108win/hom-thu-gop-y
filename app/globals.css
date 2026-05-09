@@ -86,7 +86,11 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 }
-
+@theme {
+  --breakpoint-xs: 30rem;
+  --breakpoint-2xl: 100rem;
+  --breakpoint-3xl: 120rem;
+}
 :root {
   --background: oklch(0.985 0.025 98);
   --foreground: oklch(0.23 0.025 260);
@@ -314,13 +318,12 @@
 .command-hero {
   position: relative;
   overflow: hidden;
-  background:
-    linear-gradient(
-      135deg,
-      var(--military-command-dark),
-      var(--military-command) 52%,
-      #dc2626
-    );
+  background: linear-gradient(
+    135deg,
+    var(--military-command-dark),
+    var(--military-command) 52%,
+    #dc2626
+  );
 }
 
 .command-hero::before {
@@ -432,7 +435,6 @@
 
 .metric-tile {
   border: 1px solid rgba(255, 244, 204, 0.18);
-  border-radius: var(--radius-xl);
   background:
     linear-gradient(
       180deg,

@@ -7,6 +7,7 @@ import {
   LoaderCircle,
   Pencil,
   Save,
+  Unlink,
   UserRound,
   X,
 } from "lucide-react";
@@ -111,6 +112,8 @@ export function AccountTab({
   });
   const [editingAccount, setEditingAccount] = useState(emptyEditDraft);
   const [editingUsername, setEditingUsername] = useState("");
+  const [unlinkTarget, setUnlinkTarget] = useState<ManagedAccount | null>(null);
+  const [unlinkingUsername, setUnlinkingUsername] = useState("");
 
   const linkedListenerIds = new Set(
     accounts
@@ -200,7 +203,10 @@ export function AccountTab({
       const response = await fetch("/api/admin/accounts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(accountDraft),
+        body: JSON.stringify({
+          ...accountDraft,
+          username: accountDraft.username.trim().toLowerCase(),
+        }),
       });
       if (!response.ok) {
         throw new Error(await readErrorMessage(response));
@@ -286,6 +292,51 @@ export function AccountTab({
         editError instanceof Error ? editError.message : "Không thể cập nhật tài khoản.",
         { id: toastId },
       );
+    }
+  };
+
+  const confirmUnlinkAccount = (account: ManagedAccount) => {
+    if (!account.listener_id) {
+      return;
+    }
+
+    setUnlinkTarget(account);
+  };
+
+  const unlinkAccount = async () => {
+    if (!unlinkTarget) {
+      return;
+    }
+
+    setUnlinkingUsername(unlinkTarget.username);
+    const toastId = toast.loading("Đang gỡ liên kết tài khoản...");
+    try {
+      const response = await fetch("/api/admin/accounts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: unlinkTarget.username,
+          unlinkListener: true,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await readErrorMessage(response));
+      }
+
+      await loadAccounts();
+      await onLinkedDataChange?.();
+      setUnlinkTarget(null);
+      toast.success("Đã gỡ liên kết và tắt tài khoản.", { id: toastId });
+    } catch (unlinkError) {
+      toast.error(
+        unlinkError instanceof Error
+          ? unlinkError.message
+          : "Không thể gỡ liên kết tài khoản.",
+        { id: toastId },
+      );
+    } finally {
+      setUnlinkingUsername("");
     }
   };
 
@@ -791,7 +842,11 @@ export function AccountTab({
                     <p className="font-bold text-foreground">{account.display_name}</p>
                     <p className="text-muted-foreground text-xs font-semibold">
                       {account.username} · {account.role === "listener" ? "Người phụ trách" : "Quản trị"}
-                      {listener ? ` · ${listener.fullname}` : ""}
+                      {listener
+                        ? ` · ${listener.fullname}`
+                        : account.role === "listener"
+                          ? " · Chưa liên kết"
+                          : ""}
                     </p>
                     {assignedCategoryIds.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1">
@@ -814,6 +869,21 @@ export function AccountTab({
                     <span className={`rounded-field px-3 py-1 text-xs font-bold uppercase ${account.is_enabled ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
                       {account.is_enabled ? "Đang bật" : "Đã tắt"}
                     </span>
+                    {account.role === "listener" && account.listener_id && (
+                      <button
+                        type="button"
+                        onClick={() => confirmUnlinkAccount(account)}
+                        disabled={unlinkingUsername === account.username}
+                        className="btn btn-outline btn-error btn-sm px-3 text-xs font-semibold uppercase"
+                      >
+                        {unlinkingUsername === account.username ? (
+                          <LoaderCircle className="size-4 animate-spin" />
+                        ) : (
+                          <Unlink className="size-4" />
+                        )}
+                        Gỡ liên kết
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => openEditDialog(account)}
@@ -1067,6 +1137,59 @@ export function AccountTab({
             </div>
           </div>
         </dialog>
+      )}
+
+      {unlinkTarget && (
+        <div className="modal modal-open" role="alertdialog" aria-modal="true">
+          <div className="modal-box border-border bg-base-100 border shadow-2xl">
+            <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-red-50 text-red-700">
+              <Unlink className="size-7" />
+            </div>
+            <h3 className="text-lg font-semibold uppercase">Gỡ liên kết tài khoản</h3>
+            <p className="text-base-content/70 mt-2 text-sm">
+              {`Tài khoản "${unlinkTarget.display_name}" sẽ bị tắt và không còn xem được các thư được phân công.`}
+            </p>
+            <div className="border-border/70 bg-muted mt-4 rounded-box border p-3 text-sm">
+              <p className="font-bold text-foreground">{unlinkTarget.display_name}</p>
+              <p className="text-muted-foreground text-xs font-semibold">
+                {unlinkTarget.username}
+              </p>
+            </div>
+            <div className="modal-action">
+              <button
+                type="button"
+                className="btn btn-outline focus-lift"
+                disabled={Boolean(unlinkingUsername)}
+                onClick={() => setUnlinkTarget(null)}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="btn btn-error focus-lift"
+                disabled={Boolean(unlinkingUsername)}
+                onClick={() => void unlinkAccount()}
+              >
+                {unlinkingUsername ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : (
+                  <Unlink className="size-4" />
+                )}
+                {unlinkingUsername ? "Đang gỡ" : "Gỡ liên kết"}
+              </button>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="modal-backdrop"
+            aria-label="Đóng"
+            onClick={() => {
+              if (!unlinkingUsername) {
+                setUnlinkTarget(null);
+              }
+            }}
+          />
+        </div>
       )}
     </section>
   );

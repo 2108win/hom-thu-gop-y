@@ -30,6 +30,7 @@ type AccountBody = {
   unit?: unknown;
   assignedCategories?: unknown;
   isEnabled?: unknown;
+  unlinkListener?: unknown;
 };
 
 async function requireAdminAccount() {
@@ -122,7 +123,7 @@ export async function POST(request: Request) {
 
   try {
     const body = (await request.json()) as AccountBody;
-    const username = String(body.username ?? "").trim();
+    const username = String(body.username ?? "").trim().toLowerCase();
     const password = String(body.password ?? "").trim();
     const displayName = String(body.displayName ?? "").trim();
     const role = body.role === "listener" ? "listener" : "admin";
@@ -185,6 +186,26 @@ export async function PATCH(request: Request) {
     const username = String(body.username ?? "").trim();
     if (!username) {
       return badRequest("Thiếu tên đăng nhập cần cập nhật.");
+    }
+
+    if (body.unlinkListener === true) {
+      const account = await getAdminAccount(username);
+      if (!account) {
+        return NextResponse.json({ message: "Không tìm thấy tài khoản." }, { status: 404 });
+      }
+      if (account.role !== "listener") {
+        return badRequest("Chỉ có thể gỡ liên kết tài khoản người phụ trách.");
+      }
+
+      const updated = await patchAdminAccount(username, {
+        listener_id: "",
+        is_enabled: false,
+      });
+      if (!updated) {
+        return NextResponse.json({ message: "Không tìm thấy tài khoản." }, { status: 404 });
+      }
+
+      return NextResponse.json({ account: await accountPayload(updated) });
     }
 
     const patch: Parameters<typeof patchAdminAccount>[1] = {};

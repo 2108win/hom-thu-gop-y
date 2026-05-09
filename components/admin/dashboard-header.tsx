@@ -103,21 +103,21 @@ export function DashboardHeader({
           showSurveyStats ? "sm:grid-cols-4" : "sm:grid-cols-3"
         }`}
       >
-        <div className="metric-tile p-3">
+        <div className="metric-tile rounded-xl p-3">
           <Inbox className="mb-2 size-5 text-(--military-medal-soft)" />
           <p className="text-2xl font-semibold">{ticketCount}</p>
           <p className="text-[10px] font-semibold text-white/70 uppercase">
             Phiếu đã nhận
           </p>
         </div>
-        <div className="metric-tile p-3">
+        <div className="metric-tile rounded-xl p-3">
           <ShieldCheck className="mb-2 size-5 text-(--military-medal-soft)" />
           <p className="text-2xl font-semibold">{pendingCount}</p>
           <p className="text-[10px] font-semibold text-white/70 uppercase">
             Đang chờ
           </p>
         </div>
-        <div className="metric-tile p-3">
+        <div className="metric-tile rounded-xl p-3">
           <CheckCircle2 className="mb-2 size-5 text-(--military-medal-soft)" />
           <p className="text-2xl font-semibold">{doneCount}</p>
           <p className="text-[10px] font-semibold text-white/70 uppercase">
@@ -125,7 +125,7 @@ export function DashboardHeader({
           </p>
         </div>
         {showSurveyStats && (
-          <div className="metric-tile p-3">
+          <div className="metric-tile rounded-xl p-3">
             <FileSpreadsheet className="mb-2 size-5 text-(--military-medal-soft)" />
             <p className="text-2xl font-semibold">
               {openSurveyCount}/{surveyCount}

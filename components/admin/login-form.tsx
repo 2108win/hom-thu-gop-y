@@ -1,6 +1,7 @@
 "use client";
 
-import { LoaderCircle, LogIn } from "lucide-react";
+import { ArrowLeft, LoaderCircle, LogIn } from "lucide-react";
+import Link from "next/link";
 import type { FormEvent } from "react";
 
 import { unitName } from "@/lib/site-data";
@@ -13,10 +14,16 @@ type LoginFormProps = {
 
 export function LoginForm({ loading, loginError, onSubmit }: LoginFormProps) {
   return (
-    <main className="site-canvas flex items-center justify-center p-4">
+    <main className="site-canvas flex flex-col justify-center gap-4 p-4">
+      <Link
+        href="/"
+        className="btn btn-outline btn-square focus-lift border-border text-primary gap-2 bg-white/85 text-xs font-bold uppercase shadow-sm hover:bg-white"
+      >
+        <ArrowLeft className="size-4" />
+      </Link>
       <form
         onSubmit={onSubmit}
-        className="shine-card reveal-up border-border w-full max-w-sm border bg-white p-7 text-center shadow-xl"
+        className="shine-card reveal-up border-border mx-auto w-full max-w-sm border bg-white p-7 text-center shadow-xl"
       >
         <p className="text-primary mb-1 text-[10px] font-semibold tracking-[0.16em] uppercase">
           {unitName}

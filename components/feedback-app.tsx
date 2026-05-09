@@ -9,6 +9,7 @@ import {
   Cloudy,
   Copy,
   Download,
+  Feather,
   Frown,
   Headphones,
   ListChecks,
@@ -60,6 +61,29 @@ const quickMessageIcons = {
   "today-sad": Frown,
   "today-tired": BatteryLow,
   "today-worried": Cloudy,
+};
+
+const quickMessageStyles = {
+  "today-happy": {
+    button:
+      "border-emerald-300/70 bg-emerald-50/90 text-emerald-800 hover:border-emerald-500 hover:bg-emerald-100 hover:text-emerald-950",
+    badge: "bg-emerald-200/75 text-emerald-800",
+  },
+  "today-sad": {
+    button:
+      "border-sky-300/70 bg-sky-50/90 text-sky-800 hover:border-sky-500 hover:bg-sky-100 hover:text-sky-950",
+    badge: "bg-sky-200/75 text-sky-800",
+  },
+  "today-tired": {
+    button:
+      "border-amber-300/80 bg-amber-50/90 text-amber-800 hover:border-amber-500 hover:bg-amber-100 hover:text-amber-950",
+    badge: "bg-amber-200/80 text-amber-800",
+  },
+  "today-worried": {
+    button:
+      "border-violet-300/70 bg-violet-50/90 text-violet-800 hover:border-violet-500 hover:bg-violet-100 hover:text-violet-950",
+    badge: "bg-violet-200/75 text-violet-800",
+  },
 };
 
 function normalizeMatchText(value: string) {
@@ -291,7 +315,6 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
   };
 
   const applyTemplate = (template: (typeof quickMessages)[number]) => {
-    setCategoryId(template.categoryId);
     setMessage(template.body);
     window.requestAnimationFrame(() => {
       textareaRef.current?.focus();
@@ -406,9 +429,9 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                   return (
                     <div
                       key={step.label}
-                      className="metric-tile focus-lift flex items-center gap-3 p-3"
+                      className="metric-tile focus-lift flex items-center gap-3 rounded-md p-1 sm:rounded-xl sm:p-3"
                     >
-                      <div className="bg-accent text-accent-foreground flex size-10 shrink-0 items-center justify-center rounded-full">
+                      <div className="bg-accent text-accent-foreground flex size-8 shrink-0 items-center justify-center rounded-full sm:size-10">
                         <Icon className="size-4" />
                       </div>
                       <div>
@@ -445,7 +468,7 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                   Cài app
                 </button>
                 {!showInstall && (
-                  <div className="shine-card btn text-primary inline-flex items-center justify-center gap-2 px-4 text-sm font-semibold uppercase">
+                  <div className="shine-card btn text-primary hidden items-center justify-center gap-2 px-4 text-sm font-semibold uppercase sm:inline-flex">
                     <LockKeyhole className="size-4" />
                     Bảo mật
                   </div>
@@ -455,7 +478,7 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
               <div className="tabs tabs-box mb-4 grid w-full grid-cols-2">
                 <button
                   type="button"
-                  className={`tab gap-2 ${tab === "submit" ? "tab-active bg-primary text-primary-content" : ""}`}
+                  className={`tab text-foreground gap-2 ${tab === "submit" ? "tab-active bg-primary text-primary-content" : ""}`}
                   onClick={() => setTab("submit")}
                 >
                   <Send className="size-4" />
@@ -463,21 +486,29 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                 </button>
                 <button
                   type="button"
-                  className={`tab gap-2 ${tab === "search" ? "tab-active bg-error text-error-content" : ""}`}
+                  className={`tab text-foreground gap-2 ${tab === "search" ? "tab-active bg-error text-error-content" : ""}`}
                   onClick={() => setTab("search")}
                 >
                   <Search className="size-4" />
-                  Tra cứu
+                  Tra cứu phản hồi
                 </button>
               </div>
 
               {tab === "submit" && (
                 <div className="space-y-4">
-                  <div className="shine-card reveal-up reveal-delay-1 bg-accent/45 border-(--military-medal)/45 shadow-none">
-                    <div className="p-4 pb-2 text-center">
-                      <h3 className="text-accent-foreground text-xs font-semibold tracking-[0.14em] uppercase">
-                        Khai báo nhanh nội dung
-                      </h3>
+                  <div className="shine-card reveal-up reveal-delay-1 border-(--military-medal)/45 bg-gradient-to-br from-(--military-cream) via-white to-(--military-medal-soft)/35 shadow-lg shadow-green-950/10">
+                    <div className="flex items-center justify-between gap-3 p-4 pb-2">
+                      <div>
+                        <p className="text-[10px] font-black tracking-[0.18em] text-(--military-medal) uppercase drop-shadow-[0_1px_0_rgba(255,255,255,0.7)]">
+                          Mẫu gợi ý
+                        </p>
+                        <h3 className="mt-1 text-sm font-black tracking-[0.08em] text-(--military-green) uppercase sm:text-base">
+                          Khai báo nhanh nội dung
+                        </h3>
+                      </div>
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-(--military-medal) to-(--military-green) text-white shadow-md ring-2 shadow-green-950/20 ring-white/70">
+                        <Feather className="size-4.5" />
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 gap-2 p-4 pt-2 sm:grid-cols-2">
                       {quickMessages.map((template) => {
@@ -485,15 +516,23 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                           quickMessageIcons[
                             template.id as keyof typeof quickMessageIcons
                           ] ?? MessageSquareText;
+                        const stateStyle =
+                          quickMessageStyles[
+                            template.id as keyof typeof quickMessageStyles
+                          ];
 
                         return (
                           <button
                             key={template.id}
                             type="button"
                             onClick={() => applyTemplate(template)}
-                            className="btn btn-outline text-accent-foreground focus-lift hover:bg-accent/55 border-(--military-medal)/45 bg-white px-3 text-xs font-bold"
+                            className={`btn btn-outline focus-lift px-3 text-xs font-black shadow-sm shadow-green-950/5 hover:shadow-md ${stateStyle?.button ?? "border-(--military-medal)/35 bg-white/90 text-(--military-green) hover:border-(--military-medal) hover:bg-(--military-cream) hover:text-(--military-olive)"}`}
                           >
-                            <Icon className="size-4" />
+                            <span
+                              className={`flex size-6 items-center justify-center rounded-full ${stateStyle?.badge ?? "bg-(--military-medal-soft)/45 text-(--military-green)"}`}
+                            >
+                              <Icon className="size-3.5" />
+                            </span>
                             {template.label}
                           </button>
                         );
@@ -540,13 +579,13 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                                   <ShieldUser className="size-4" />
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="text-foreground line-clamp-2 text-sm font-semibold break-all">
+                                  <p className="text-foreground line-clamp-2 text-xs font-semibold break-all">
                                     {user.rank} {user.fullname}
                                     {user.has_linked_account ? (
                                       <BadgeCheck className="ml-1 inline size-3.5 align-[-2px] text-blue-600" />
                                     ) : null}
                                   </p>
-                                  <p className="text-muted-foreground text-xs leading-4 font-medium">
+                                  <p className="text-muted-foreground text-[10px] leading-4 font-medium">
                                     {user.position}
                                   </p>
                                 </div>
@@ -782,7 +821,7 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
       {showIosModal ? (
         <div className="modal modal-open" role="dialog" aria-modal="true">
           <div className="modal-box max-w-sm text-center">
-            <div className="bg-primary mx-auto mb-4 flex size-14 items-center justify-center text-white">
+            <div className="bg-primary mx-auto mb-4 flex size-14 items-center justify-center rounded-full text-white">
               <Download className="size-7" />
             </div>
             <h2 className="text-foreground text-lg font-semibold">
