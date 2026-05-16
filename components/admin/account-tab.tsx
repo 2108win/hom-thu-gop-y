@@ -228,7 +228,9 @@ export function AccountTab({
       toast.success("Đã tạo tài khoản.", { id: toastId });
     } catch (createError) {
       toast.error(
-        createError instanceof Error ? createError.message : "Không thể tạo tài khoản.",
+        createError instanceof Error
+          ? createError.message
+          : "Không thể tạo tài khoản.",
         { id: toastId },
       );
     }
@@ -289,7 +291,9 @@ export function AccountTab({
       toast.success("Đã cập nhật tài khoản.", { id: toastId });
     } catch (editError) {
       toast.error(
-        editError instanceof Error ? editError.message : "Không thể cập nhật tài khoản.",
+        editError instanceof Error
+          ? editError.message
+          : "Không thể cập nhật tài khoản.",
         { id: toastId },
       );
     }
@@ -565,7 +569,8 @@ export function AccountTab({
                 </div>
               )}
               <p className="text-muted-foreground mt-2 text-xs font-semibold">
-                Nhóm phụ trách do Admin phân công, tài khoản người lắng nghe chỉ xem.
+                Nhóm phụ trách do Admin phân công, tài khoản người lắng nghe chỉ
+                xem.
               </p>
             </div>
           )}
@@ -589,7 +594,9 @@ export function AccountTab({
               </div>
               <button
                 type="button"
-                onClick={() => void (pushEnabled ? disablePush() : enablePush())}
+                onClick={() =>
+                  void (pushEnabled ? disablePush() : enablePush())
+                }
                 disabled={!pushSupported || pushActionPending}
                 className={`btn btn-sm focus-lift px-4 text-xs font-semibold uppercase ${
                   pushEnabled ? "btn-outline" : "btn-primary"
@@ -606,7 +613,7 @@ export function AccountTab({
               </button>
             </div>
             {!pushSupported && (
-              <p className="mt-2 rounded-field border border-amber-100 bg-amber-50 p-2 text-xs font-semibold text-amber-700">
+              <p className="rounded-field mt-2 border border-amber-100 bg-amber-50 p-2 text-xs font-semibold text-amber-700">
                 Trình duyệt này chưa hỗ trợ thông báo web.
               </p>
             )}
@@ -640,7 +647,7 @@ export function AccountTab({
             />
           </label>
 
-          <label className="floating-label md:col-span-2">
+          <label className="floating-label">
             <span>Nhập lại mật khẩu mới</span>
             <input
               value={confirmPassword}
@@ -694,7 +701,8 @@ export function AccountTab({
                 Tài khoản người phụ trách
               </h2>
               <p className="text-muted-foreground text-xs font-semibold">
-                Liên kết tài khoản đăng nhập với hồ sơ người phụ trách để phân quyền và nhận thông báo.
+                Liên kết tài khoản đăng nhập với hồ sơ người phụ trách để phân
+                quyền và nhận thông báo.
               </p>
             </div>
           </div>
@@ -826,7 +834,10 @@ export function AccountTab({
               />
             </label>
             <div className="flex justify-end md:col-span-2">
-              <button type="submit" className="btn btn-primary btn-sm px-4 font-semibold uppercase">
+              <button
+                type="submit"
+                className="btn btn-primary btn-sm px-4 font-semibold uppercase"
+              >
                 Tạo tài khoản liên kết
               </button>
             </div>
@@ -834,14 +845,24 @@ export function AccountTab({
 
           <div className="mt-4 grid gap-2">
             {accounts.map((account) => {
-              const listener = listeners.find((item) => item.id === account.listener_id);
+              const listener = listeners.find(
+                (item) => item.id === account.listener_id,
+              );
               const assignedCategoryIds = account.assigned_categories;
               return (
-                <div key={account.username} className="rounded-box border-border bg-muted flex flex-col gap-1 border p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                <div
+                  key={account.username}
+                  className="rounded-box border-border bg-muted flex flex-col gap-1 border p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                >
                   <div>
-                    <p className="font-bold text-foreground">{account.display_name}</p>
+                    <p className="text-foreground font-bold">
+                      {account.display_name}
+                    </p>
                     <p className="text-muted-foreground text-xs font-semibold">
-                      {account.username} · {account.role === "listener" ? "Người phụ trách" : "Quản trị"}
+                      {account.username} ·{" "}
+                      {account.role === "listener"
+                        ? "Người phụ trách"
+                        : "Quản trị"}
                       {listener
                         ? ` · ${listener.fullname}`
                         : account.role === "listener"
@@ -866,7 +887,9 @@ export function AccountTab({
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`rounded-field px-3 py-1 text-xs font-bold uppercase ${account.is_enabled ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                    <span
+                      className={`rounded-field px-3 py-1 text-xs font-bold uppercase ${account.is_enabled ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}
+                    >
                       {account.is_enabled ? "Đang bật" : "Đã tắt"}
                     </span>
                     {account.role === "listener" && account.listener_id && (
@@ -903,8 +926,10 @@ export function AccountTab({
       {editingUsername && (
         <dialog open className="modal modal-open">
           <div className="modal-box border-border bg-base-100 max-h-[90vh] max-w-3xl overflow-y-auto border p-0 shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-base-300 bg-base-100 px-4 py-3">
-              <h3 className="text-sm font-semibold uppercase">Chỉnh sửa tài khoản liên kết</h3>
+            <div className="border-base-300 bg-base-100 sticky top-0 z-10 flex items-center justify-between border-b px-4 py-3">
+              <h3 className="text-sm font-semibold uppercase">
+                Chỉnh sửa tài khoản liên kết
+              </h3>
               <button
                 type="button"
                 onClick={() => {
@@ -1078,11 +1103,16 @@ export function AccountTab({
                             onChange={() =>
                               setEditingAccount((current) => {
                                 const assigned =
-                                  current.assignedCategories.includes(category.id)
+                                  current.assignedCategories.includes(
+                                    category.id,
+                                  )
                                     ? current.assignedCategories.filter(
                                         (item) => item !== category.id,
                                       )
-                                    : [...current.assignedCategories, category.id];
+                                    : [
+                                        ...current.assignedCategories,
+                                        category.id,
+                                      ];
 
                                 return {
                                   ...current,
@@ -1115,7 +1145,7 @@ export function AccountTab({
               </label>
             </div>
 
-            <div className="sticky bottom-0 flex justify-end gap-2 border-t border-base-300 bg-base-100 px-4 py-3">
+            <div className="border-base-300 bg-base-100 sticky bottom-0 flex justify-end gap-2 border-t px-4 py-3">
               <button
                 type="button"
                 onClick={() => {
@@ -1145,12 +1175,16 @@ export function AccountTab({
             <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-red-50 text-red-700">
               <Unlink className="size-7" />
             </div>
-            <h3 className="text-lg font-semibold uppercase">Gỡ liên kết tài khoản</h3>
+            <h3 className="text-lg font-semibold uppercase">
+              Gỡ liên kết tài khoản
+            </h3>
             <p className="text-base-content/70 mt-2 text-sm">
               {`Tài khoản "${unlinkTarget.display_name}" sẽ bị tắt và không còn xem được các thư được phân công.`}
             </p>
-            <div className="border-border/70 bg-muted mt-4 rounded-box border p-3 text-sm">
-              <p className="font-bold text-foreground">{unlinkTarget.display_name}</p>
+            <div className="border-border/70 bg-muted rounded-box mt-4 border p-3 text-sm">
+              <p className="text-foreground font-bold">
+                {unlinkTarget.display_name}
+              </p>
               <p className="text-muted-foreground text-xs font-semibold">
                 {unlinkTarget.username}
               </p>

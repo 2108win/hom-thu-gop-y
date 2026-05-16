@@ -486,7 +486,7 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                 </button>
                 <button
                   type="button"
-                  className={`tab text-foreground gap-2 ${tab === "search" ? "tab-active bg-error text-error-content" : ""}`}
+                  className={`tab text-foreground gap-2 ${tab === "search" ? "tab-active bg-error text-primary-content" : ""}`}
                   onClick={() => setTab("search")}
                 >
                   <Search className="size-4" />
@@ -496,7 +496,7 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
 
               {tab === "submit" && (
                 <div className="space-y-4">
-                  <div className="shine-card reveal-up reveal-delay-1 border-(--military-medal)/45 bg-gradient-to-br from-(--military-cream) via-white to-(--military-medal-soft)/35 shadow-lg shadow-green-950/10">
+                  <div className="shine-card reveal-up reveal-delay-1 border-(--military-medal)/45 bg-linear-to-br from-(--military-cream) via-white to-(--military-medal-soft)/35 shadow-lg shadow-green-950/10">
                     <div className="flex items-center justify-between gap-3 p-4 pb-2">
                       <div>
                         <p className="text-[10px] font-black tracking-[0.18em] text-(--military-medal) uppercase drop-shadow-[0_1px_0_rgba(255,255,255,0.7)]">
@@ -506,7 +506,7 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                           Khai báo nhanh nội dung
                         </h3>
                       </div>
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-(--military-medal) to-(--military-green) text-white shadow-md ring-2 shadow-green-950/20 ring-white/70">
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-(--military-medal) to-(--military-green) text-white shadow-md ring-2 shadow-green-950/20 ring-white/70">
                         <Feather className="size-4.5" />
                       </div>
                     </div>
