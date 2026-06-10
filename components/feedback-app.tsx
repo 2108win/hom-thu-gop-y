@@ -465,7 +465,7 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                   }`}
                 >
                   <Download className="size-4" />
-                  Cài app
+                  Cài đặt app
                 </button>
                 {!showInstall && (
                   <div className="shine-card btn text-primary hidden items-center justify-center gap-2 px-4 text-sm font-semibold uppercase sm:inline-flex">
