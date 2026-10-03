@@ -389,7 +389,7 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
           <div className="command-shell reveal-up overflow-hidden">
             <div className="relative overflow-hidden p-4 text-white sm:p-6">
               <Image
-                src="/529723281_1309018167316443_6078166642491713113_n.jpg"
+                src="/bg-hoa.jpg"
                 alt="Ảnh nền phong cảnh Lữ đoàn"
                 fill
                 priority
