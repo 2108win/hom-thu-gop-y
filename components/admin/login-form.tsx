@@ -25,7 +25,7 @@ export function LoginForm({ loading, loginError, onSubmit }: LoginFormProps) {
         onSubmit={onSubmit}
         className="shine-card reveal-up border-border mx-auto w-full max-w-sm border bg-white p-7 text-center shadow-xl"
       >
-        <p className="text-primary mb-1 text-[10px] font-semibold tracking-[0.16em] uppercase">
+        <p className="text-primary mb-1 text-lg font-extrabold tracking-[0.16em] uppercase">
           {unitName}
         </p>
         <h2 className="text-primary mb-2 text-xl font-semibold uppercase">

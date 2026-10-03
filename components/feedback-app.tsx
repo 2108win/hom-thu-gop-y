@@ -387,64 +387,76 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
       <div className="flex-1">
         <section className="mx-auto max-w-5xl px-3 py-10 sm:px-5">
           <div className="command-shell reveal-up overflow-hidden">
-            <div className="command-hero p-4 text-white sm:p-6">
-              <div className="mb-5 flex items-center justify-between gap-3">
-                <span className="lux-badge flex items-center gap-2 px-3 py-1 text-[10px] font-semibold tracking-[0.14em] text-(--military-cream) uppercase">
-                  <ShieldCheck className="size-3" />
-                  Tiếp nhận góp ý bảo mật
-                </span>
-                <Link
-                  href="/quan-tri"
-                  title="Đăng nhập quản trị"
-                  className="btn btn-square btn-outline focus-lift border-(--military-medal-soft)/40 bg-white/10 text-(--military-cream) hover:bg-white/20 hover:text-white"
-                >
-                  <Settings className="size-5" />
-                </Link>
-              </div>
+            <div className="relative overflow-hidden p-4 text-white sm:p-6">
+              <Image
+                src="/529723281_1309018167316443_6078166642491713113_n.jpg"
+                alt="Ảnh nền phong cảnh Lữ đoàn"
+                fill
+                priority
+                className="object-cover"
+              />
+              {/* Lớp phủ sáng hơn để hiện rõ cảnh hoa và cảnh sắc */}
+              <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/45" />
 
-              <div className="grid items-center gap-5 sm:grid-cols-[6rem_1fr]">
-                <Image
-                  src={logoPath}
-                  alt="Logo Lữ đoàn PPK234"
-                  width={96}
-                  height={96}
-                  priority
-                  className="mx-auto size-24 object-contain"
-                  sizes="96px"
-                />
-                <div className="text-center sm:text-left">
-                  <p className="text-xs font-semibold tracking-[0.18em] text-(--military-medal-soft) uppercase">
-                    {unitName}
-                  </p>
-                  <h1 className="mt-2 text-4xl leading-10 font-black tracking-tight text-white uppercase sm:text-5xl sm:leading-13">
-                    Hòm thư góp ý
-                  </h1>
+              <div className="relative z-10">
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <span className="lux-badge flex items-center gap-2 bg-black/40 px-3 py-1 text-[10px] font-semibold tracking-[0.14em] text-(--military-cream) uppercase shadow-sm backdrop-blur-sm">
+                    <ShieldCheck className="size-3" />
+                    Tiếp nhận góp ý bảo mật
+                  </span>
+                  <Link
+                    href="/quan-tri"
+                    title="Đăng nhập quản trị"
+                    className="btn btn-square btn-outline focus-lift border-(--military-medal-soft)/40 bg-black/30 text-(--military-cream) shadow-sm backdrop-blur-sm hover:bg-black/50 hover:text-white"
+                  >
+                    <Settings className="size-5" />
+                  </Link>
                 </div>
-              </div>
 
-              <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                {workflowSteps.map((step, index) => {
-                  const Icon = step.icon;
+                <div className="grid items-center gap-5 sm:grid-cols-[6rem_1fr]">
+                  <Image
+                    src={logoPath}
+                    alt="Logo Lữ đoàn PPK234"
+                    width={96}
+                    height={96}
+                    priority
+                    className="mx-auto size-24 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)]"
+                    sizes="96px"
+                  />
+                  <div className="text-center sm:text-left">
+                    <p className="text-lg font-extrabold tracking-[0.18em] text-(--military-medal-soft) uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] sm:text-base">
+                      {unitName}
+                    </p>
+                    <h1 className="mt-2 text-4xl leading-10 font-black tracking-tight text-white uppercase drop-shadow-[0_3px_8px_rgba(0,0,0,0.9)] sm:text-5xl sm:leading-13">
+                      Hòm thư góp ý
+                    </h1>
+                  </div>
+                </div>
 
-                  return (
-                    <div
-                      key={step.label}
-                      className="metric-tile focus-lift flex items-center gap-3 rounded-md p-1 sm:rounded-xl sm:p-3"
-                    >
-                      <div className="bg-accent text-accent-foreground flex size-8 shrink-0 items-center justify-center rounded-full sm:size-10">
-                        <Icon className="size-4" />
+                <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {workflowSteps.map((step, index) => {
+                    const Icon = step.icon;
+
+                    return (
+                      <div
+                        key={step.label}
+                        className="metric-tile focus-lift flex items-center gap-3 rounded-md bg-black/35 p-1 shadow-md backdrop-blur-md sm:rounded-xl sm:p-3"
+                      >
+                        <div className="bg-accent text-accent-foreground flex size-8 shrink-0 items-center justify-center rounded-full shadow-sm sm:size-10">
+                          <Icon className="size-4" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-semibold tracking-[0.12em] text-white/70 uppercase">
+                            Bước {index + 1}
+                          </p>
+                          <p className="text-xs font-semibold text-white uppercase">
+                            {step.label}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-[10px] font-semibold tracking-[0.12em] text-white/55 uppercase">
-                          Bước {index + 1}
-                        </p>
-                        <p className="text-xs font-semibold text-white uppercase">
-                          {step.label}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -460,9 +472,8 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                 <button
                   type="button"
                   onClick={handleInstallClick}
-                  className={`btn btn-outline border-border text-primary focus-lift bg-secondary text-sm font-semibold uppercase hover:bg-white ${
-                    showInstall ? "inline-flex" : "hidden"
-                  }`}
+                  className={`btn btn-outline border-border text-primary focus-lift bg-secondary text-sm font-semibold uppercase hover:bg-white ${showInstall ? "inline-flex" : "hidden"
+                    }`}
                 >
                   <Download className="size-4" />
                   Cài đặt app
@@ -514,11 +525,11 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                       {quickMessages.map((template) => {
                         const Icon =
                           quickMessageIcons[
-                            template.id as keyof typeof quickMessageIcons
+                          template.id as keyof typeof quickMessageIcons
                           ] ?? MessageSquareText;
                         const stateStyle =
                           quickMessageStyles[
-                            template.id as keyof typeof quickMessageStyles
+                          template.id as keyof typeof quickMessageStyles
                           ];
 
                         return (
@@ -747,11 +758,10 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                             </p>
                           </div>
                           <span
-                            className={`badge border px-2 ${
-                              searchResult.status === "done"
-                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                : "bg-accent/70 text-accent-foreground border-(--military-medal)/45"
-                            }`}
+                            className={`badge border px-2 ${searchResult.status === "done"
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : "bg-accent/70 text-accent-foreground border-(--military-medal)/45"
+                              }`}
                           >
                             {searchResult.status === "done"
                               ? "Đã xử lý"

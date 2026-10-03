@@ -60,7 +60,7 @@ export function DashboardHeader({
       </button>
       <div className="mb-4 flex flex-col flex-wrap gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-[10px] font-semibold tracking-[0.18em] text-(--military-medal-soft) uppercase">
+          <p className="text-lg font-extrabold tracking-[0.18em] text-(--military-medal-soft) uppercase">
             {unitName}
           </p>
           <h1 className="text-xl font-semibold uppercase">
@@ -99,9 +99,8 @@ export function DashboardHeader({
       </div>
 
       <div
-        className={`grid grid-cols-2 gap-2 ${
-          showSurveyStats ? "sm:grid-cols-4" : "sm:grid-cols-3"
-        }`}
+        className={`grid grid-cols-2 gap-2 ${showSurveyStats ? "sm:grid-cols-4" : "sm:grid-cols-3"
+          }`}
       >
         <div className="metric-tile rounded-xl p-3">
           <Inbox className="mb-2 size-5 text-(--military-medal-soft)" />
