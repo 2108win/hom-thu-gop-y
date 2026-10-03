@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  allowedDevOrigins: ["test3000.winlax.id.vn", "test3001.winlax.id.vn", "192.168.1.165"],
 };
 
 export default nextConfig;

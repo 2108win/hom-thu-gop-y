@@ -16,6 +16,7 @@ import {
   LoaderCircle,
   LockKeyhole,
   MessageSquareText,
+  MoreHorizontal,
   PenLine,
   Phone,
   Search,
@@ -33,6 +34,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { UAParser } from "ua-parser-js";
 
 import {
   normalizeTicketCode,
@@ -143,6 +145,67 @@ function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+function detectBrowserEnv() {
+  if (typeof navigator === "undefined") {
+    return { isInApp: false, isIosSafari: false, isIos: false, isAndroid: false };
+  }
+
+  const parser = new UAParser(navigator.userAgent);
+  const result = parser.getResult();
+  const browser = result.browser;
+  const os = result.os;
+  const ua = (navigator.userAgent || navigator.vendor || "").toLowerCase();
+
+  const isIos = os.name === "iOS" || /iphone|ipad|ipod/.test(ua);
+  const isAndroid = os.name === "Android" || /android/.test(ua);
+
+  // Nhận diện trình duyệt trong ứng dụng (Zalo, FB, TikTok, Messenger, v.v.)
+  const isUaInApp =
+    browser.type === "inapp" ||
+    browser.name === "Zalo" ||
+    browser.name === "Facebook" ||
+    browser.name === "Instagram" ||
+    browser.name === "WeChat" ||
+    browser.name === "Line" ||
+    browser.name === "Twitter" ||
+    browser.name === "TikTok";
+
+  const hasInAppToken =
+    ua.includes("zalo") ||
+    ua.includes("fbav") ||
+    ua.includes("fban") ||
+    ua.includes("fbios") ||
+    ua.includes("fb_iab") ||
+    ua.includes("messenger") ||
+    ua.includes("instagram") ||
+    ua.includes("tiktok") ||
+    ua.includes("bytedance") ||
+    ua.includes("line/") ||
+    ua.includes("micromessenger") ||
+    ua.includes("threads") ||
+    ua.includes("twitter") ||
+    ua.includes("snapchat") ||
+    (ua.includes("wv") && isAndroid);
+
+  const isInApp = isUaInApp || hasInAppToken;
+
+  // Safari gốc trên iOS (Mobile Safari / Safari, không phải in-app và không phải Chrome/Edge/Firefox trên iOS)
+  const isIosSafari =
+    isIos &&
+    !isInApp &&
+    (browser.name === "Mobile Safari" || browser.name === "Safari") &&
+    !ua.includes("crios") &&
+    !ua.includes("fxios") &&
+    !ua.includes("edgios");
+
+  return {
+    isInApp,
+    isIosSafari,
+    isIos,
+    isAndroid,
+  };
+}
+
 export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
   const [tab, setTab] = useState<Tab>("submit");
   const [listeners, setListeners] =
@@ -163,9 +226,23 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
     useState<BeforeInstallPromptEvent | null>(null);
   const [showInstall, setShowInstall] = useState(false);
   const [showIosModal, setShowIosModal] = useState(false);
+  const [installGuideTab, setInstallGuideTab] = useState<"inapp" | "safari" | "android">("inapp");
+  const [copiedInstallLink, setCopiedInstallLink] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const copyInstallLink = async () => {
+    const url = "https://hom-thu-gop-y.vercel.app";
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedInstallLink(true);
+      toast.success("Đã sao chép liên kết cài đặt!");
+      window.setTimeout(() => setCopiedInstallLink(false), 2000);
+    } catch {
+      toast.error("Không thể sao chép liên kết.");
+    }
+  };
 
   const copyModalTicketCode = async () => {
     if (!modalTicket) {
@@ -228,8 +305,6 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
   };
 
   useEffect(() => {
-    const isIos = () =>
-      /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
     const isStandalone = () => {
       const nav = window.navigator as Navigator & { standalone?: boolean };
       return (
@@ -247,15 +322,15 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
     };
 
     window.addEventListener("beforeinstallprompt", handleInstallPrompt);
-    const iosInstallCheck = window.setTimeout(() => {
-      if (isIos() && !isStandalone()) {
+    const installCheck = window.setTimeout(() => {
+      if (!isStandalone()) {
         setShowInstall(true);
       }
     }, 0);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
-      window.clearTimeout(iosInstallCheck);
+      window.clearTimeout(installCheck);
     };
   }, []);
 
@@ -359,27 +434,36 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
   };
 
   const handleInstallClick = async () => {
-    const isIos = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+    const env = detectBrowserEnv();
 
-    if (isIos) {
+    if (env.isInApp) {
+      setInstallGuideTab("inapp");
       setShowIosModal(true);
       return;
     }
 
-    if (!installEvent) {
-      const message =
-        "Trình duyệt đã cài ứng dụng hoặc không hỗ trợ cài đặt tự động.";
-      setErrorModal(message);
-      toast.error(message);
+    if (env.isIosSafari) {
+      setInstallGuideTab("safari");
+      setShowIosModal(true);
       return;
     }
 
-    await installEvent.prompt();
-    const choice = await installEvent.userChoice;
-    if (choice.outcome === "accepted") {
-      setShowInstall(false);
+    if (installEvent) {
+      try {
+        await installEvent.prompt();
+        const choice = await installEvent.userChoice;
+        if (choice.outcome === "accepted") {
+          setShowInstall(false);
+        }
+        setInstallEvent(null);
+        return;
+      } catch {
+        // Fallback to instruction modal
+      }
     }
-    setInstallEvent(null);
+
+    setInstallGuideTab(env.isAndroid ? "android" : env.isIos ? "safari" : "inapp");
+    setShowIosModal(true);
   };
 
   return (
@@ -830,29 +914,249 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
 
       {showIosModal ? (
         <div className="modal modal-open" role="dialog" aria-modal="true">
-          <div className="modal-box max-w-sm text-center">
-            <div className="bg-primary mx-auto mb-4 flex size-14 items-center justify-center rounded-full text-white">
-              <Download className="size-7" />
+          <div className="modal-box max-w-md p-5 text-left sm:p-6">
+            <div className="text-center">
+              <div className="mx-auto mb-3 flex size-14 items-center justify-center">
+                <Image
+                  src={logoPath}
+                  alt="Logo Lữ đoàn"
+                  width={56}
+                  height={56}
+                  className="size-14 object-contain drop-shadow-md"
+                />
+              </div>
+              <h2 className="text-foreground text-lg font-bold uppercase tracking-wide">
+                Hướng dẫn cài đặt App
+              </h2>
+              <p className="text-muted-foreground mt-1 text-xs">
+                {installGuideTab === "inapp"
+                  ? "Khi mở qua Zalo hoặc trình duyệt trong ứng dụng"
+                  : installGuideTab === "safari"
+                    ? "Cài đặt trực tiếp trên Safari (iPhone/iPad)"
+                    : "Cài đặt trên trình duyệt Chrome (Android)"}
+              </p>
             </div>
-            <h2 className="text-foreground text-lg font-semibold">
-              Cài đặt trên iPhone
-            </h2>
-            <p className="text-muted-foreground mt-3 text-left leading-6">
-              1. Nhấn nút <b>Chia sẻ</b> ở thanh menu dưới của Safari.
-              <br />
-              2. Chọn <b>Thêm vào màn hình chính</b>.
-              <br />
-              3. Nhấn <b>Thêm</b> để hoàn tất.
-            </p>
-            <div className="text-muted-foreground mt-5 flex justify-center gap-3">
-              <Share className="size-5" />
-              <SquarePlus className="size-5" />
+
+            <div className="mt-4">
+              {installGuideTab === "inapp" && (
+                <div className="space-y-2.5 text-xs text-foreground/90">
+                  <div className="rounded-xl border border-border/80 bg-base-200/50 p-2.5 transition-all">
+                    <div className="flex items-start gap-2.5">
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white shadow-xs">
+                        1
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-foreground">
+                          Mở đường link:
+                        </p>
+                        <div className="mt-1.5 flex items-center gap-1.5 rounded-lg border border-border bg-base-100 p-1.5">
+                          <span className="min-w-0 flex-1 truncate font-mono text-[11px] font-medium text-primary">
+                            https://hom-thu-gop-y.vercel.app
+                          </span>
+                          <button
+                            type="button"
+                            onClick={copyInstallLink}
+                            className="btn btn-xs btn-outline border-border shrink-0 gap-1 text-[10px]"
+                          >
+                            {copiedInstallLink ? (
+                              <>
+                                <Check className="size-3 text-success" />
+                                <span>Đã chép</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="size-3" />
+                                <span>Sao chép</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border/80 bg-base-200/50 p-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white shadow-xs">
+                        2
+                      </span>
+                      <p className="flex-1">
+                        Vào dấu{" "}
+                        <b className="inline-flex items-center gap-0.5 rounded bg-base-100 px-1.5 py-0.5 font-bold shadow-xs">
+                          <MoreHorizontal className="inline size-3.5" /> “...”
+                        </b>{" "}
+                        trên góc trên phải màn hình.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border/80 bg-base-200/50 p-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white shadow-xs">
+                        3
+                      </span>
+                      <p className="flex-1">
+                        Bấm <b>mở bằng safari</b>.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border/80 bg-base-200/50 p-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white shadow-xs">
+                        4
+                      </span>
+                      <p className="flex-1">
+                        Bấm vào biểu tượng chia sẻ{" "}
+                        <b className="inline-flex items-center gap-1 rounded bg-base-100 px-1.5 py-0.5 font-bold shadow-xs">
+                          <Share className="inline size-3.5 text-primary" /> Chia sẻ
+                        </b>{" "}
+                        trên góc phải màn hình.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border/80 bg-base-200/50 p-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white shadow-xs">
+                        5
+                      </span>
+                      <p className="flex-1">
+                        Bấm vào biểu tượng{" "}
+                        <b className="inline-flex items-center gap-1 rounded bg-base-100 px-1.5 py-0.5 font-bold shadow-xs">
+                          <SquarePlus className="inline size-3.5 text-primary" /> “+”
+                          thêm vào màn hình chính
+                        </b>
+                        .
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border/80 bg-base-200/50 p-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white shadow-xs">
+                        6
+                      </span>
+                      <p className="flex-1">
+                        Bấm chữ{" "}
+                        <b className="rounded bg-base-100 px-1.5 py-0.5 font-bold text-primary shadow-xs">
+                          “Thêm”
+                        </b>{" "}
+                        góc phải phía trên để kết thúc hoàn thành cài đặt.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {installGuideTab === "safari" && (
+                <div className="space-y-2.5 text-xs text-foreground/90">
+                  <div className="rounded-xl border border-border/80 bg-base-200/50 p-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white shadow-xs">
+                        1
+                      </span>
+                      <p className="flex-1">
+                        Nhấn vào biểu tượng{" "}
+                        <b className="inline-flex items-center gap-1 rounded bg-base-100 px-1.5 py-0.5 font-bold shadow-xs">
+                          <Share className="inline size-3.5 text-primary" /> Chia sẻ
+                        </b>{" "}
+                        ở thanh menu phía dưới của trình duyệt Safari.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border/80 bg-base-200/50 p-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white shadow-xs">
+                        2
+                      </span>
+                      <p className="flex-1">
+                        Cuộn xuống danh sách tùy chọn và chọn{" "}
+                        <b className="inline-flex items-center gap-1 rounded bg-base-100 px-1.5 py-0.5 font-bold shadow-xs">
+                          <SquarePlus className="inline size-3.5 text-primary" /> Thêm vào màn hình chính
+                        </b>
+                        .
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border/80 bg-base-200/50 p-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white shadow-xs">
+                        3
+                      </span>
+                      <p className="flex-1">
+                        Nhấn chữ{" "}
+                        <b className="rounded bg-base-100 px-1.5 py-0.5 font-bold text-primary shadow-xs">
+                          “Thêm”
+                        </b>{" "}
+                        ở góc trên bên phải màn hình để hoàn tất cài đặt.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {installGuideTab === "android" && (
+                <div className="space-y-2.5 text-xs text-foreground/90">
+                  <div className="rounded-xl border border-border/80 bg-base-200/50 p-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white shadow-xs">
+                        1
+                      </span>
+                      <p className="flex-1">
+                        Nhấn vào biểu tượng{" "}
+                        <b className="inline-flex items-center gap-0.5 rounded bg-base-100 px-1.5 py-0.5 font-bold shadow-xs">
+                          <MoreHorizontal className="inline size-3.5" /> 3 chấm (⋮)
+                        </b>{" "}
+                        ở góc trên bên phải trình duyệt Chrome.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border/80 bg-base-200/50 p-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white shadow-xs">
+                        2
+                      </span>
+                      <p className="flex-1">
+                        Chọn{" "}
+                        <b className="rounded bg-base-100 px-1.5 py-0.5 font-bold text-primary shadow-xs">
+                          “Cài đặt ứng dụng”
+                        </b>{" "}
+                        hoặc{" "}
+                        <b className="rounded bg-base-100 px-1.5 py-0.5 font-bold shadow-xs">
+                          “Thêm vào màn hình chính”
+                        </b>
+                        .
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border/80 bg-base-200/50 p-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white shadow-xs">
+                        3
+                      </span>
+                      <p className="flex-1">
+                        Nhấn{" "}
+                        <b className="rounded bg-base-100 px-1.5 py-0.5 font-bold text-primary shadow-xs">
+                          “Cài đặt”
+                        </b>{" "}
+                        để đưa ứng dụng ra màn hình chính điện thoại.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="modal-action">
+
+            <div className="modal-action mt-5">
               <button
                 type="button"
                 onClick={() => setShowIosModal(false)}
-                className="btn btn-primary w-full font-semibold uppercase"
+                className="btn btn-primary w-full font-semibold uppercase shadow-md"
               >
                 Đã hiểu
               </button>
