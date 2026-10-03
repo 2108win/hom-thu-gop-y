@@ -12,8 +12,8 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "Hòm thư góp ý - LỮ ĐOÀN PPK234",
-  description: "Hòm thư góp ý và khảo sát trực tuyến của LỮ ĐOÀN PPK234",
+  title: "Hòm thư góp ý điện tử - LỮ ĐOÀN PPK234",
+  description: "Hòm thư góp ý điện tử và khảo sát trực tuyến của LỮ ĐOÀN PPK234",
   manifest: "/manifest.webmanifest",
 };
 

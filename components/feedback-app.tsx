@@ -428,7 +428,7 @@ export function FeedbackApp({ initialListeners = [] }: FeedbackAppProps) {
                       {unitName}
                     </p>
                     <h1 className="mt-2 text-4xl leading-10 font-black tracking-tight text-white uppercase drop-shadow-[0_3px_8px_rgba(0,0,0,0.9)] sm:text-5xl sm:leading-13">
-                      Hòm thư góp ý
+                      Hòm thư góp ý điện tử
                     </h1>
                   </div>
                 </div>

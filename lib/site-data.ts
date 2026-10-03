@@ -24,7 +24,7 @@ export type QuickTemplate = {
   body: string;
 };
 
-export const appName = "Hòm thư góp ý - LỮ ĐOÀN PPK234";
+export const appName = "Hòm thư góp ý điện tử - LỮ ĐOÀN PPK234";
 export const unitName = "LỮ ĐOÀN PPK234";
 export const slogan =
   'ĐOÀN TAM ĐẢO ANH HÙNG "CÓ LỆNH LÀ ĐI, CÓ ĐỊCH LÀ ĐÁNH, ĐÃ ĐÁNH LÀ THẮNG"';

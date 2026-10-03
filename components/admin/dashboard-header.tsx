@@ -64,7 +64,7 @@ export function DashboardHeader({
             {unitName}
           </p>
           <h1 className="text-xl font-semibold uppercase">
-            Bảng điều hành hòm thư góp ý
+            Bảng điều hành hòm thư góp ý điện tử
           </h1>
           <p className="text-xs text-white/70">
             Quản lý góp ý, phản hồi xử lý và danh sách khảo sát.
